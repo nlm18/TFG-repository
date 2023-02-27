@@ -1,9 +1,11 @@
 import tensorflow as tf
 
-tf.compat.v1.disable_eager_execution()
-from tensorflow.keras.applications import resnet as resnet
-from tensorflow.keras.losses import categorical_crossentropy
+#tf.compat.v1.disable_eager_execution()
+from tensorflow.keras import layers
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.losses import categorical_crossentropy
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,6 +22,50 @@ print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
 print('y_train shape:', y_train.shape)
 
+model = Sequential()
+pretrained_model = tf.keras.applications.ResNet50(
+    include_top=False,
+    weights="imagenet",
+    input_tensor=None,
+    input_shape=(32,32,3),
+    pooling='avg',
+    classes=10
+)
+for layer in pretrained_model.layers:
+    layer.trainable = False
+model.add(pretrained_model)
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+
+model.compile(loss=categorical_crossentropy, optimizer=Adam(learning_rate=0.01), metrics=["accuracy"])
+'''
+#classifier = KerasClassifier(model=model, clip_values=(min_pixel_value, max_pixel_value), use_logits=False)
+w =tf.shape(x_train)
+model.fit(tf.reshape(x_train,(w[0],32,32,3)), y_train, epochs=5, steps_per_epoch=100 )
+#model.fit(x_train, y_train, epochs=5)'''
+
+y_train = tf.keras.utils.to_categorical(y_train, 10)
+y_test = tf.keras.utils.to_categorical(y_test, 10)
+
+epochs = 1
+history = model.fit(x_train, y_train, validation_split=0.2, epochs=epochs)
+#lista de datos del historial
+#print(history.history.keys())
+
+model.evaluate(x_test, y_test)
+
+fig1= plt.gcf()
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.grid()
+plt.title('ResNet model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epochs')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
+
+'''
 class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 plt.figure(figsize=(10,10))
@@ -32,33 +78,4 @@ for i in range(25):
     # The CIFAR labels happen to be arrays,
     # which is why you need the extra index
     plt.xlabel(class_names[y_test[i][0]])
-plt.show()
-
-model = tf.keras.applications.ResNet50(
-    include_top=False,
-    weights="imagenet",
-    input_tensor=None,
-    input_shape=(32,32,3),
-    pooling=None,
-    classes=1000
-)
-'''
-#https://keras.io/examples/vision/image_classification_from_scratch/
-model = resnet(
-    include_top=True,
-    weights="imagenet",
-    input_tensor=None,
-    input_shape=None,
-    pooling=None,
-    classes=10,
-    classifier_activation="softmax")'''
-
-model.compile(loss='sparse_categorical_crossentropy', optimizer=Adam(learning_rate=0.01), metrics=["accuracy"])
-
-#classifier = KerasClassifier(model=model, clip_values=(min_pixel_value, max_pixel_value), use_logits=False)
-
-model.fit(x_train, y_train, epochs=5)
-
-predictions = model.evaluate(x_test, y_test)
-accuracy = np.sum(np.argmax(predictions, axis=1) == np.argmax(y_test, axis=1)) / len(y_test)
-print("Accuracy on benign test examples: {}%".format(accuracy * 100))
+plt.show()'''
