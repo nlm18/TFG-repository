@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
-from IPython.display import Image
 
 import random
 from keras.utils import np_utils
@@ -50,9 +49,9 @@ def executeGradCam(i, adversarial, visualize):
     # https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
 
     if adversarial:
-        File_name = 'gradCam_example_Adversarial_image-%s_predicted-%s.jpg' % (i, predicted)
+        File_name = 'gradCam_example_Adversarial_image-%s_predicted-%s_Real-%s.jpg' % (i, predicted, real_value)
     else:
-        File_name = 'gradCam_example_Benign_image-%s_predicted-%s.jpg' % (i, predicted)
+        File_name = 'gradCam_example_Benign_image-%s_predicted-%s_Real-%s.jpg' % (i, predicted, real_value)
     gradCamInterface.save_and_display_gradcam(img_255, heatmap, File_name)
 
 #%% Data Preparation
@@ -120,7 +119,7 @@ print("Time: %0.2fs" % (t3 - t2))
 
 # Remove last layer's softmax
 model.layers[-1].activation = None
-last_conv_layer_name = 'conv2d_5' # 'conv2d_5'#model.layers[-1].name
+last_conv_layer_name = 'conv2d_5' #model.layers[-1].name
 # Print what the top predicted class is
 
 A  =  [ ]
