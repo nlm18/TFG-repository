@@ -102,8 +102,8 @@ def save_and_display_gradcam(img, heatmap, cam_path="cam.jpg", alpha=0.4):
     jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
 
     # Superimpose the heatmap on original image
-    superimposed_img = jet_heatmap * alpha + img
-    superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img)
+    superimposed_img_array = jet_heatmap * alpha + img
+    superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img_array)
 
     # Save the superimposed image
     superimposed_img.save(cam_path)
@@ -111,6 +111,28 @@ def save_and_display_gradcam(img, heatmap, cam_path="cam.jpg", alpha=0.4):
     # Display Grad CAM
     display(Image(cam_path))
 
+def display_gradcam(img, heatmap, alpha=0.4):
+    # Rescale heatmap to a range 0-255
+    heatmap = np.uint8(255 * heatmap)
+
+    # Use jet colormap to colorize heatmap
+    jet = cm.get_cmap("jet")
+
+    # Use RGB values of the colormap
+    jet_colors = jet(np.arange(256))[:, :3]
+    jet_heatmap = jet_colors[heatmap]
+
+    # Create an image with RGB colorized heatmap
+    jet_heatmap = keras.preprocessing.image.array_to_img(jet_heatmap)
+    jet_heatmap = jet_heatmap.resize((img.shape[1], img.shape[0]))
+    jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
+
+    # Superimpose the heatmap on original image
+    superimposed_img_array = jet_heatmap * alpha + img
+    superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img_array)
+
+    # return Grad CAM
+    return superimposed_img
 
 def decode_predictions(preds_oneHotEncoder, num_classes, classes_array):
     if len(classes_array) != num_classes:
