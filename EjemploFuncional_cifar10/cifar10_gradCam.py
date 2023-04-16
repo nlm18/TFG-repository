@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import art.attacks.evasion
+
 import gradCamInterface
 import os
 import errno
@@ -11,8 +13,8 @@ from tensorflow import keras
 import random
 from keras.utils import np_utils
 import time
-
-from art.attacks.evasion import FastGradientMethod
+#Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
+from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent
 from art.estimators.classification import TensorFlowV2Classifier
 
 def train_step(model, images, labels):
@@ -22,26 +24,34 @@ def train_step(model, images, labels):
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-def executeGradCam(i):
+def getAttackMethod(name, classifier, epsilon):
+    if name == 'FastGradientMethod':
+        return FastGradientMethod(estimator=classifier, eps=epsilon)
+    elif name == 'BasicIterativeMethod':
+        return BasicIterativeMethod(estimator=classifier, eps=epsilon, max_iter=25)
+    elif name == 'ProjectedGradientDescent':
+        return ProjectedGradientDescent(estimator=classifier, eps=epsilon, max_iter=25)
+
+def executeGradCam(num, epsilon, n_iter):
     # https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
     # Prepare image
-    img_adv = x_test_adv[i]
-    img_orig = X_test[i]
-    list_img = []
+    img_orig = X_test[num]
+    list_img = [img_orig]
+    for i in range(0+n_iter*len(epsilon), (1+n_iter)*len(epsilon)):
+        list_img.append(x_test_adv[i][num])
     img_array = []
     preds = []
     predicted = []
     heatmap = []
     gradCam_img = []
     img_255 = []
-    list_img.append(img_orig)
-    list_img.append(img_adv)
-
-    for ind in range(2): #ind == 0 es la imagen sin modificar
+    plot_img = []
+    # Para la lista de imagenes que tendra la forma: [imagOriginal, adv_eps, adv_eps...]
+    for ind in range(0, len(list_img)): #ind == 0 es la imagen sin modificar
         img_array.append(gradCamInterface.get_img_array(list_img[ind]))
         preds.append(classifier.predict(img_array[ind]))
         predicted.append(gradCamInterface.decode_predictions(preds[ind], num_classes, classes))
-        real_value = gradCamInterface.decode_predictions(y_test[i], num_classes, classes)
+        real_value = gradCamInterface.decode_predictions(y_test[num], num_classes, classes)
 
         # Generate class activation heatmap
         heatmap.append(gradCamInterface.make_gradcam_heatmap(img_array[ind], model, last_conv_layer_name))
@@ -54,19 +64,20 @@ def executeGradCam(i):
         if ind == 0:
             print("Predicted benign example: ", predicted[ind])
         else:
+            print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[ind-1]))
             print("Predicted adversarial example: ", predicted[ind], "   real value: ", real_value)
-    print("     ------------------")
-    plot_img = []
-    plot_img.append(keras.preprocessing.image.array_to_img(img_255[0]))
-    plot_img.append(gradCam_img[0])
-    plot_img.append(keras.preprocessing.image.array_to_img(img_255[1]))
-    plot_img.append(gradCam_img[1])
-    return plot_img, predicted, real_value
 
-def save_and_plot_results(num, list_of_images, predicted, real_value, attack):
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(5, 5), subplot_kw={'xticks' : [], 'yticks' : []}, sharey=True, layout='compressed')#
+        plot_img.append(keras.preprocessing.image.array_to_img(img_255[ind]))
+        plot_img.append(gradCam_img[ind])
+    print("     ------------------")
+    return plot_img, predicted
+
+def save_and_plot_results(num, list_of_images, predicted, epsilon, attack):
+    num_rows=1+len(epsilon)
+    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(5, 5), subplot_kw={'xticks': [], 'yticks': []}, sharey=True, layout='compressed')
     ind = 0;
-    ind_pred=0;
+    ind_pred = 0;
+    real_value = gradCamInterface.decode_predictions(y_test[num], num_classes, classes)
     for ax in axs.flat:
         ax.imshow(list_of_images[ind])
         #Ponemos titulos y nombre de los ejes
@@ -77,7 +88,7 @@ def save_and_plot_results(num, list_of_images, predicted, real_value, attack):
             predText = 'Predicted: %s'% (predicted[ind_pred])
             ax.set_title(predText)
             if ind > 1:
-                ax.set_ylabel('Adversarial')
+                ax.set_ylabel('Adversarial, $\epsilon$=%s'% (epsilon[ind_pred-1]))
         else: #Los impares seran las imagenes con gradCam
             ax.set_title('GradCam')
             ind_pred+=1
@@ -91,12 +102,12 @@ def save_and_plot_results(num, list_of_images, predicted, real_value, attack):
             raise
     File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s_Real-%s.jpg' % (attack, num, attack, real_value)
     fig.savefig(File_name)
+
 #%% Data Preparation
 # Load data
 t1 = time.time()
 (X_train, y_train), (X_test, y_test) = keras.datasets.cifar10.load_data()
 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-
 
 visualize = False
 # Visualize some of them
@@ -140,34 +151,44 @@ print("Accuracy on benign test examples: {}%".format(accuracy * 100))
 t2 = time.time()
 print("Time: %0.2fs" % (t2 - t1))
 
-# Generate adversarial test examples
-attack = FastGradientMethod(estimator=classifier, eps=0.01)
-x_test_adv = attack.generate(x=X_test)
 
-# Evaluate the ART classifier on adversarial test examples
-predictions = classifier.predict(x_test_adv)
-accuracy = np.sum(np.argmax(predictions, axis=1) == np.argmax(y_test, axis=1)) / len(y_test)
-print("Accuracy on adversarial test examples: {}%".format(accuracy * 100))
-# Print time
-t3 = time.time()
-print("Time: %0.2fs" % (t3 - t2))
+# Para distintos valores de epsilon
+epsilon = [0.01, 0.05]#, 0.05, 0.1, 0.15, 0.2]
+x_test_adv = []
+attackName = ['FastGradientMethod', 'BasicIterativeMethod']#, 'ProjectedGradientDescent']
+for atck in range(0, len(attackName)):
+    for i in range(0, len(epsilon)):
+        # Generate adversarial test examples
+        attack = getAttackMethod(attackName[atck], classifier, epsilon[i])
+        x_test_adv.append(attack.generate(x=X_test))
+
+        # Evaluate the ART classifier on adversarial test examples
+        predictions = classifier.predict(x_test_adv[i])
+        accuracy = np.sum(np.argmax(predictions, axis=1) == np.argmax(y_test, axis=1)) / len(y_test)
+        print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[i]))
+        print("Accuracy on adversarial test examples: {}%".format(accuracy * 100))
+        # Print time
+        t3 = time.time()
+        print("Time: %0.2fs" % (t3 - t2))
+        t2 = t3
 
 #GRAD CAM
 
 # Remove last layer's softmax
 model.layers[-1].activation = None
 last_conv_layer_name = 'conv2d_5' #model.layers[-1].name
-# Print what the top predicted class is
 
-A  =  [ ]
+A = []
 i = 0
 while(i < 20):
     A.append(random.randint(1, 700))
     i+=1
-
-for index in range(0, 20):
-    list_of_images, predicted, real_value = executeGradCam(A[index])
-    save_and_plot_results(A[index], list_of_images, predicted, real_value, 'FastGradient')
+for atck in range(0, len(attackName)):
+    n_iter = 0
+    for index in range(0, 20):
+        list_of_images, predicted = executeGradCam(A[index], epsilon, n_iter)
+        save_and_plot_results(A[index], list_of_images, predicted, epsilon, attackName[atck])
+    n_iter += 1
 
 '''Con una imagen cargada
 img_path = "ship-icon.jpg"
