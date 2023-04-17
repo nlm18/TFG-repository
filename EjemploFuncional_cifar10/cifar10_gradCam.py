@@ -28,17 +28,17 @@ def getAttackMethod(name, classifier, epsilon):
     if name == 'FastGradientMethod':
         return FastGradientMethod(estimator=classifier, eps=epsilon)
     elif name == 'BasicIterativeMethod':
-        return BasicIterativeMethod(estimator=classifier, eps=epsilon, max_iter=25)
+        return BasicIterativeMethod(estimator=classifier, eps=epsilon, eps_step=0.5, max_iter=15)
     elif name == 'ProjectedGradientDescent':
-        return ProjectedGradientDescent(estimator=classifier, eps=epsilon, max_iter=25)
+        return ProjectedGradientDescent(estimator=classifier, eps=epsilon, eps_step=0.5, max_iter=15)
 
 def executeGradCam(num, epsilon, n_iter):
     # https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
     # Prepare image
     img_orig = X_test[num]
     list_img = [img_orig]
-    for i in range(0+n_iter*len(epsilon), (1+n_iter)*len(epsilon)):
-        list_img.append(x_test_adv[i][num])
+    for i in range(0, len(epsilon)):
+        list_img.append(x_test_adv[i+n_iter*len(epsilon)][num])
     img_array = []
     preds = []
     predicted = []
@@ -46,7 +46,7 @@ def executeGradCam(num, epsilon, n_iter):
     gradCam_img = []
     img_255 = []
     plot_img = []
-    # Para la lista de imagenes que tendra la forma: [imagOriginal, adv_eps, adv_eps...]
+    # Para la lista de imagenes que tendra la forma: [imagOriginal, adv_eps1, adv_eps2...]
     for ind in range(0, len(list_img)): #ind == 0 es la imagen sin modificar
         img_array.append(gradCamInterface.get_img_array(list_img[ind]))
         preds.append(classifier.predict(img_array[ind]))
@@ -153,9 +153,9 @@ print("Time: %0.2fs" % (t2 - t1))
 
 
 # Para distintos valores de epsilon
-epsilon = [0.01, 0.05]#, 0.05, 0.1, 0.15, 0.2]
+epsilon = [0.01, 0.05, 0.1, 0.15, 0.2]
 x_test_adv = []
-attackName = ['FastGradientMethod', 'BasicIterativeMethod']#, 'ProjectedGradientDescent']
+attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent']
 for atck in range(0, len(attackName)):
     for i in range(0, len(epsilon)):
         # Generate adversarial test examples
@@ -163,7 +163,7 @@ for atck in range(0, len(attackName)):
         x_test_adv.append(attack.generate(x=X_test))
 
         # Evaluate the ART classifier on adversarial test examples
-        predictions = classifier.predict(x_test_adv[i])
+        predictions = classifier.predict(x_test_adv[i+atck*len(epsilon)])
         accuracy = np.sum(np.argmax(predictions, axis=1) == np.argmax(y_test, axis=1)) / len(y_test)
         print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[i]))
         print("Accuracy on adversarial test examples: {}%".format(accuracy * 100))
@@ -184,11 +184,10 @@ while(i < 20):
     A.append(random.randint(1, 700))
     i+=1
 for atck in range(0, len(attackName)):
-    n_iter = 0
     for index in range(0, 20):
-        list_of_images, predicted = executeGradCam(A[index], epsilon, n_iter)
+        list_of_images, predicted = executeGradCam(A[index], epsilon, atck)
         save_and_plot_results(A[index], list_of_images, predicted, epsilon, attackName[atck])
-    n_iter += 1
+
 
 '''Con una imagen cargada
 img_path = "ship-icon.jpg"
