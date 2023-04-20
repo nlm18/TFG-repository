@@ -74,7 +74,7 @@ def executeGradCam(num, epsilon, n_iter):
 
 def save_and_plot_results(num, list_of_images, predicted, epsilon, attack):
     num_rows=1+len(epsilon)
-    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(5, 5), subplot_kw={'xticks': [], 'yticks': []}, sharey=True, layout='compressed')
+    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(15, 15), subplot_kw={'xticks': [], 'yticks': []}, layout='compressed')
     ind = 0;
     ind_pred = 0;
     real_value = gradCamInterface.decode_predictions(y_test[num], num_classes, classes)
@@ -153,7 +153,7 @@ print("Time: %0.2fs" % (t2 - t1))
 
 
 # Para distintos valores de epsilon
-epsilon = [0.01, 0.05, 0.1, 0.15, 0.2]
+epsilon = [0.01, 0.05, 0.1, 0.15]
 x_test_adv = []
 attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent']
 for atck in range(0, len(attackName)):
@@ -180,11 +180,12 @@ last_conv_layer_name = 'conv2d_5' #model.layers[-1].name
 
 A = []
 i = 0
-while(i < 20):
+n = 20
+while(i < n):
     A.append(random.randint(1, 700))
     i+=1
 for atck in range(0, len(attackName)):
-    for index in range(0, 20):
+    for index in range(0, n):
         list_of_images, predicted = executeGradCam(A[index], epsilon, atck)
         save_and_plot_results(A[index], list_of_images, predicted, epsilon, attackName[atck])
 
