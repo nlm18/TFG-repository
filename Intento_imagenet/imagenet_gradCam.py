@@ -56,7 +56,6 @@ def executeGradCam(num, classifier, epsilon, n_iter):
     predicted = []
     heatmap = []
     gradCam_img = []
-    img_255 = []
     plot_img = []
     # Para la lista de imagenes que tendra la forma: [imagOriginal, adv_eps1, adv_eps2...]
     for ind in range(0, len(list_img)): #ind == 0 es la imagen sin modificar
@@ -65,11 +64,10 @@ def executeGradCam(num, classifier, epsilon, n_iter):
 
         # Generate class activation heatmap
         heatmap.append(gradCamInterface.make_gradcam_heatmap(img_array[ind], model, last_conv_layer_name))
-        #plt.matshow(heatmap)  # tiene que estar el eagle enable, eagle error: https://github.com/Trusted-AI/adversarial-robustness-toolbox/issues/330
 
         # Display heatmap
-        img_255.append(list_img[ind] * 255)
-        gradCam_img.append(gradCamInterface.display_gradcam(img_255[ind], heatmap[ind]))
+        #Ya esta entre 0-255 img_255.append(list_img[ind] * 255)
+        gradCam_img.append(gradCamInterface.display_gradcam(list_img[ind], heatmap[ind]))
 
         if ind == 0:
             predicted = decode_predictions(preds[ind], top=1)
@@ -79,8 +77,9 @@ def executeGradCam(num, classifier, epsilon, n_iter):
             print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[ind-1]))
             print("Predicted adversarial example: ", predicted[ind][0][0][1])
 
-        plot_img.append(keras.preprocessing.image.array_to_img(img_255[ind]))
+        plot_img.append(keras.preprocessing.image.array_to_img(list_img[ind]))
         plot_img.append(gradCam_img[ind])
+
     print("     ------------------")
     return plot_img, predicted
 
@@ -96,7 +95,11 @@ def save_and_plot_results(num, list_of_images, predicted, epsilon, attack):
             ax.set_ylabel('Original')
 
         if ind % 2 == 0: #Los pares tendran el valor predecido
-            predText = 'Predicted: %s'% (predicted[ind_pred])
+            if ind_pred==0:
+                predText = 'Predicted: %s'% (predicted[ind_pred][0][1])
+            else:
+                predText = 'Predicted: %s' % (predicted[ind_pred][0][0][1])
+
             ax.set_title(predText)
             if ind > 1:
                 ax.set_ylabel('Adversarial, $\epsilon$=%s'% (epsilon[ind_pred-1]))
@@ -111,7 +114,7 @@ def save_and_plot_results(num, list_of_images, predicted, epsilon, attack):
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s.jpg' % (attack, num, attack )
+    File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s.jpg' % (attack, num, attack)
     fig.savefig(File_name)
 
 # ------------------------ Código principal ---------------------------------
@@ -121,10 +124,20 @@ num_classes = 1000
 img_size = (300, 300)
 A = []
 i = 0
-n = 25
-total_img=47
+
+imagenet = False
+if imagenet :
+    input_images_path = "C:/Users/User/TFG-repository/EjemploFuncional_imagenet/ILSVRC2012_img_val/"
+    imagenet_txt = "_imagenet"
+    n = 50
+    total_img=4434
+else :
+    input_images_path = "C:/Users/User/TFG-repository/EjemploFuncional_imagenet/imagenes/"
+    imagenet_txt = ""
+    n = 25
+    total_img=46
 while(i < n):
-    A.append(random.randint(0, total_img))#4434
+    A.append(random.randint(0, total_img))
     i+=1
 # Load model
 img_shape = (300, 300, 3)
@@ -138,22 +151,22 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=
 #Load Images
 X_test = np.ndarray(shape=(total_img+1, 300, 300, 3), dtype='float32')
 loadImages = False
+
 if loadImages== True:
-    input_images_path = "C:/Users/User/TFG-repository/Intento_imagenet/imagenes/"
     files_names = os.listdir(input_images_path)
     img_path =[]
     for index in range(0, total_img):
         # Preprocess data
         img_path.append(input_images_path+files_names[index])
         X_test[index] = preprocess_input(gradCamInterface.get_img_array_path(img_path[index], img_size))
-    guardar_datos(X_test, "testImages.pkl")
+    guardar_datos(X_test, "testImages%s.pkl" % (imagenet_txt))
 else:
-    X_test = cargar_datos("testImages.pkl")
+    X_test = cargar_datos("testImages%s.pkl" % (imagenet_txt))
 
 
 # Para distintos valores de epsilon
 loadImages = True
-epsilon = [1]#[0.01, 0.05, 0.1, 0.15]
+epsilon = [0.4, 0.5, 0.6, 0.7]#[0.01, 0.05, 0.1, 0.15]
 x_test_adv = []
 attackName = ['FastGradientMethod']# ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent']
 if loadImages == True:
