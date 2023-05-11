@@ -16,6 +16,16 @@ import time
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent
 from art.estimators.classification import TensorFlowV2Classifier
+import pickle
+
+# ------------------------ Funciones auxiliares ---------------------------------
+def guardar_datos(datos, filename):
+    with open(filename, "wb") as f:
+        pickle.dump(datos, f)
+
+def cargar_datos(filename):
+     with open(filename, "rb") as f:
+         return pickle.load(f)
 
 def train_step(model, images, labels):
     with tf.GradientTape() as tape:
@@ -28,9 +38,9 @@ def getAttackMethod(name, classifier, epsilon):
     if name == 'FastGradientMethod':
         return FastGradientMethod(estimator=classifier, eps=epsilon)
     elif name == 'BasicIterativeMethod':
-        return BasicIterativeMethod(estimator=classifier, eps=epsilon, eps_step=0.5, max_iter=15)
+        return BasicIterativeMethod(estimator=classifier, eps=epsilon, eps_step=0.5, max_iter=100)
     elif name == 'ProjectedGradientDescent':
-        return ProjectedGradientDescent(estimator=classifier, eps=epsilon, eps_step=0.5, max_iter=15)
+        return ProjectedGradientDescent(estimator=classifier, eps=epsilon, eps_step=0.5, max_iter=100)
 
 def executeGradCam(num, epsilon, n_iter):
     # https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
@@ -103,6 +113,7 @@ def save_and_plot_results(num, list_of_images, predicted, epsilon, attack):
     File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s_Real-%s.jpg' % (attack, num, attack, real_value)
     fig.savefig(File_name)
 
+# ------------------------ Código principal ---------------------------------
 #%% Data Preparation
 # Load data
 t1 = time.time()
@@ -153,25 +164,38 @@ print("Time: %0.2fs" % (t2 - t1))
 
 
 # Para distintos valores de epsilon
-epsilon = [0.01, 0.05, 0.1, 0.15]
+epsilon = [0.01, 0.05]#, 0.05, 0.1, 0.15]
 x_test_adv = []
 attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent']
-for atck in range(0, len(attackName)):
-    for i in range(0, len(epsilon)):
-        # Generate adversarial test examples
-        attack = getAttackMethod(attackName[atck], classifier, epsilon[i])
-        x_test_adv.append(attack.generate(x=X_test))
+loadImages = True
+if loadImages == True:
+    for atck in range(0, len(attackName)):
+        individual_atck = []
+        for i in range(0, len(epsilon)):
+            # Generate adversarial test examples
+            attack = getAttackMethod(attackName[atck], classifier, epsilon[i])
+            x_test_adv.append(attack.generate(x=X_test))
+            individual_atck.append(attack.generate(x=X_test))
 
-        # Evaluate the ART classifier on adversarial test examples
-        predictions = classifier.predict(x_test_adv[i+atck*len(epsilon)])
-        accuracy = np.sum(np.argmax(predictions, axis=1) == np.argmax(y_test, axis=1)) / len(y_test)
-        print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[i]))
-        print("Accuracy on adversarial test examples: {}%".format(accuracy * 100))
-        # Print time
-        t3 = time.time()
-        print("Time: %0.2fs" % (t3 - t2))
-        t2 = t3
-
+            # Evaluate the ART classifier on adversarial test examples
+            predictions = classifier.predict(x_test_adv[i+atck*len(epsilon)])
+            accuracy = np.sum(np.argmax(predictions, axis=1) == np.argmax(y_test, axis=1)) / len(y_test)
+            print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[i]))
+            print("Accuracy on adversarial test examples: {}%".format(accuracy * 100))
+            # Print time
+            t3 = time.time()
+            print("Time: %0.2fs" % (t3 - t2))
+            t2 = t3
+        filename = "Adv_Images_AttackMethod_" + attackName[atck] + "_Epsilon_%s" % (epsilon) + ".pkl"
+        guardar_datos(individual_atck, filename)
+    guardar_datos(x_test_adv, "atcks_%s" % (attackName) +"_Epsilon_%s" % (epsilon) + ".pkl")
+else:
+    for atck in range(0, len(attackName)):
+        filename = "Adv_Images_AttackMethod_" + attackName[atck] +"_Epsilon_%s" % (epsilon) + ".pkl"
+        if atck == 0:
+            x_test_adv = cargar_datos(filename)
+        else:
+            x_test_adv.append(cargar_datos(filename))
 #GRAD CAM
 
 # Remove last layer's softmax

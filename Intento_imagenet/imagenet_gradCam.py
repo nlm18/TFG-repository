@@ -180,7 +180,7 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=
 
 #Load Images
 X_test = np.ndarray(shape=(total_img, 224, 224, 3), dtype='float32')
-createImages = False #Si está a true cargará las imagenes originales desde la carpeta y generará las adversarias
+createImages = True #Si está a true cargará las imagenes originales desde la carpeta y generará las adversarias
 
 if createImages== True:
     files_names = os.listdir(input_images_path)
@@ -189,17 +189,17 @@ if createImages== True:
         # Preprocess data
         img_path.append(input_images_path+files_names[index])
         X_test[index] = preprocess_input(gradCamInterface.get_img_array_path(img_path[index], img_size))
-    guardar_datos(X_test, "testImages%s.pkl" % (imagenet_txt))
+    guardar_datos(X_test, "testImages_efficientnetB0%s.pkl" % (imagenet_txt))
 else:
-    X_test = cargar_datos("testImages%s.pkl" % (imagenet_txt))
+    X_test = cargar_datos("testImages_efficientnetB0%s.pkl" % (imagenet_txt))
 
 
 # Para distintos valores de epsilon
-createImages = False
+createImages = True
 epsilon = [0.2, 0.4]#[0.01, 0.05, 0.1, 0.15]
 x_test_adv = []
-attackName = ['HopSkipJump']
-X_test = X_test[0:5]
+attackName = ['CarliniLInfMethod']
+#X_test = X_test[0:5]
 if createImages == True:
     for atck in range(0, len(attackName)):
         individual_atck = []
@@ -229,7 +229,7 @@ model.layers[-1].activation = None
 last_conv_layer_name = "top_activation"#block7a_activation
 
 for atck in range(0, len(attackName)):
-    for index in range(0, 5):
+    for index in range(0, n):
         list_of_images, predicted = executeGradCam(index, classifier, epsilon, atck)
         save_and_plot_results(index, list_of_images, predicted, epsilon, attackName[atck])
         plot_difference(index, X_test, x_test_adv, atck, attackName[atck])
