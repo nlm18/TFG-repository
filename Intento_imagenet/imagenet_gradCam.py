@@ -38,7 +38,7 @@ def train_step(model, images, labels):
 def getAttackMethod(name, classifier, epsilon):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
     if name == 'FastGradientMethod':
-        return FastGradientMethod(estimator=classifier, eps=epsilon, batch_size=4)
+        return FastGradientMethod(estimator=classifier, eps=epsilon, norm=2, batch_size=4)
     elif name == 'BasicIterativeMethod':
         return BasicIterativeMethod(estimator=classifier, eps=epsilon, max_iter=100, batch_size=4)
     elif name == 'ProjectedGradientDescent':
@@ -75,8 +75,8 @@ def executeGradCam(num, classifier, epsilon, n_iter):
         gradCam_img.append(gradCamInterface.display_gradcam(list_img[ind], heatmap[ind]))
 
         if ind == 0:
-            predicted = decode_predictions(preds[ind], top=1)
-            print("Predicted benign example: ", predicted[ind][0][1])
+            predicted.append(decode_predictions(preds[ind], top=1))
+            print("Predicted benign example: ", predicted[ind][0][0][1])
         else:
             predicted.append(decode_predictions(preds[ind], top=1))
             print("AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[ind-1]))
@@ -101,7 +101,7 @@ def save_and_plot_results(num, list_of_images, predicted, epsilon, attack):
 
         if ind % 2 == 0: #Los pares tendran el valor predecido
             if ind_pred==0:
-                predText = 'Predicted: %s'% (predicted[ind_pred][0][1])
+                predText = 'Predicted: %s'% (predicted[ind_pred][0][0][1])
             else:
                 predText = 'Predicted: %s' % (predicted[ind_pred][0][0][1])
 
@@ -130,7 +130,7 @@ def plot_difference(num, original_img, adversarial_img, n_iter, attack):
         num_col = 2
         num_rows = math.ceil(len(epsilon) / 2)
     for j in range(0, len(epsilon)):
-        resultado = (abs(original_img[num]-adversarial_img[j+n_iter*len(epsilon)][num]))*255
+        resultado = (abs(original_img[num]-adversarial_img[j+n_iter*len(epsilon)][num]))*100000
         #Ponemos titulo
         plt.subplot(num_rows, num_col, j + 1)
         plt.xticks([])
@@ -188,7 +188,8 @@ if createImages== True:
     for index in range(0, total_img):
         # Preprocess data
         img_path.append(input_images_path+files_names[index])
-        X_test[index] = preprocess_input(gradCamInterface.get_img_array_path(img_path[index], img_size))
+        X_test[index] = gradCamInterface.get_img_array_path(img_path[index], img_size)
+        #preprocess_input(gradCamInterface.get_img_array_path(img_path[index], img_size))
     guardar_datos(X_test, "testImages_efficientnetB0%s.pkl" % (imagenet_txt))
 else:
     X_test = cargar_datos("testImages_efficientnetB0%s.pkl" % (imagenet_txt))
@@ -196,9 +197,9 @@ else:
 
 # Para distintos valores de epsilon
 createImages = True
-epsilon = [0.2, 0.4]#[0.01, 0.05, 0.1, 0.15]
+epsilon = [10000]#[0.01, 0.05, 0.1, 0.15]
 x_test_adv = []
-attackName = ['CarliniLInfMethod']
+attackName = ['FastGradientMethod']
 #X_test = X_test[0:5]
 if createImages == True:
     for atck in range(0, len(attackName)):
