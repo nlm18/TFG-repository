@@ -2,17 +2,14 @@ from __future__ import print_function
 
 from Imagen import Imagen
 import gradCamInterface
+
 import os
 import math
 import errno
 import random
 import pickle
-import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow import keras
-from keras.applications.efficientnet import preprocess_input, decode_predictions
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump
 
@@ -53,7 +50,6 @@ def loadImages(path, index_vector, size=(224,224), createImages=True):
             imagen = Imagen(file_name, X_test[index], size, dir_name, '')
             img_test.append(imagen)
             # preprocess_input(gradCamInterface.get_img_array_path(img_path[index], size))
-        saveVariable(img_test, "testImages_efficientnetB0_random%simages.pkl" % (len(index_vector)))
     else :
         img_test = loadVariable("testImages_efficientnetB0_random%simages.pkl" % (len(index_vector)))
     return X_test, img_test
@@ -62,7 +58,7 @@ def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon):
     imagen.modifyData(adv_data)
     imagen.addAdversarialData(attackName, epsilon)
     return imagen
-def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True):
+def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False):
     # Para distintos valores de epsilon
     img_adv = [] # Guarda todas las imagenes seguidas, para recorrerlo:
                  # num+NUM_IMG*(indiceAtaque)*len(epsilon)+NUM_IMG*(indiceEpsilon)
@@ -70,7 +66,7 @@ def generateAdversarialImages(originalImages, x_test, attackName, epsilon, class
         for atck in range(0, len(attackName)) :
             individual_atck = []
             for i in range(0, len(epsilon)) :
-                if attackName == 'HopSkipJump' and i > 0 :
+                if attackName == 'HopSkipJump' and i > 0 and saveIndividualAttack:
                     # Guardo el hopskipjump porque no depende de epsilon
                     filename = "Adv_Images_AttackMethod_" + attackName[atck] + "max_iter_50.pkl"
                     saveVariable(individual_atck, filename)
@@ -82,9 +78,9 @@ def generateAdversarialImages(originalImages, x_test, attackName, epsilon, class
                         adv_imagen = createAdvImagenFromOriginal(originalImages[img], x_test_adv[img], attackName[atck], epsilon[i])
                         img_adv.append(adv_imagen)
                         individual_atck.append(adv_imagen)
-            filename = "Adv_Images_AttackMethod_" + attackName[atck] + "_Epsilon_%s" % (epsilon) + ".pkl"
-            saveVariable(individual_atck, filename)
-        saveVariable(img_adv, "atcks_%s" % (attackName) + "_Epsilon_%s" % (epsilon) + ".pkl")
+            if saveIndividualAttack:
+                filename = "Adv_Images_AttackMethod_" + attackName[atck] + "_Epsilon_%s" % (epsilon) + ".pkl"
+                saveVariable(individual_atck, filename)
     else :
         for atck in range(0, len(attackName)) :
             filename = "Adv_Images_AttackMethod_" + attackName[atck] + "_Epsilon_%s" % (epsilon) + ".pkl"
@@ -114,7 +110,7 @@ def getAttackMethod(name, classifier, epsilon):
     elif name == 'HopSkipJump':
         return HopSkipJump(classifier=classifier, max_iter=50, batch_size=4)
 
-def saveResults(list_of_images, imagen_data):
+def saveResults(list_of_images, imagen_data, exec_ID=''):
     num_rows=len(imagen_data)
     fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(15, 15), subplot_kw={'xticks': [], 'yticks': []}, layout='compressed')
     ind = 0;
@@ -146,10 +142,10 @@ def saveResults(list_of_images, imagen_data):
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s.jpg' % (imagen_data[1].attackName, imagen_data[1].name, imagen_data[1].attackName)
+    File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s%s.jpg' % (imagen_data[1].attackName, imagen_data[1].name, imagen_data[1].attackName, exec_ID)
     fig.savefig(File_name)
 
-def plotDifference(num, original_img, adversarial_img, n_iter, epsilon):
+def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=''):
     div_entera = (len(epsilon) % 2 == 0)
     num_col = 1
     num_rows = len(epsilon)
@@ -173,8 +169,20 @@ def plotDifference(num, original_img, adversarial_img, n_iter, epsilon):
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    File_name = 'Difference_between_orig_adv_method-%s/Difference_image-%s_attack_method-%s.jpg' % (adv_img.attackName, original_img[num].name, adv_img.attackName)
+    File_name = 'Difference_between_orig_adv_method-%s/Difference_image-%s_attack_method-%s%s.jpg' % (adv_img.attackName, original_img[num].name, adv_img.attackName, exec_ID)
     plt.savefig(File_name)
+
+def isValidExample(num, original_img, adversarial_img, n_iter, epsilon):
+    saveSuccesfulExample = False
+    total_img = len(original_img)
+    # Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen
+    if original_img[num].predictionId == original_img[num].id :
+        for j in range(0, len(epsilon)) :
+            index = num + total_img * n_iter * len(epsilon) + total_img * j
+            # Si el adversario ha conseguido confundir a la red, se guarda la imagen
+            if adversarial_img[index].predictionId != adversarial_img[index].id:
+                saveSuccesfulExample = True
+    return saveSuccesfulExample
 
 def calculateAccuracy(img_test, img_adv, attackName, epsilon):
     total_img = len(img_test)

@@ -1,15 +1,13 @@
 from __future__ import print_function
 
 import gradCamInterface
+import auxiliarFunctions as aux
+
 import os
-import numpy as np
+import errno
 import tensorflow as tf
 from tensorflow import keras
 from keras.applications.efficientnet import preprocess_input, decode_predictions
-    #Xception, preprocess_input, decode_predictions
-
-import auxiliarFunctions as aux
-
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.estimators.classification import TensorFlowV2Classifier
 
@@ -43,6 +41,7 @@ def executeGradCam(num, classifier, epsilon, n_iter):
 
         # Generate class activation heatmap
         heatmap.append(gradCamInterface.make_gradcam_heatmap(img_array[ind], model, last_conv_layer_name))
+        list_img[ind].addHeatmap(heatmap[ind])
 
         # Display heatmap
         #Ya esta entre 0-255 img_255.append(list_img[ind] * 255)
@@ -58,10 +57,13 @@ def executeGradCam(num, classifier, epsilon, n_iter):
         plot_img.append(keras.preprocessing.image.array_to_img(list_img[ind].data))
         plot_img.append(gradCam_img[ind])
 
-    #Se actualiza los valores de prediccion de las imagenes:
+    #Se actualiza los valores de prediccion y heatmap de las imagenes:
     img_test[num].addPrediction(list_img[0].predictionId)
+    img_test[num].addHeatmap(list_img[0].heatmap)
     for j in range(0, len(epsilon)):
-        img_adv[num + NUM_IMG*n_iter*len(epsilon) + NUM_IMG*j].addPrediction(list_img[j+1].predictionId)
+        index = num + NUM_IMG*n_iter*len(epsilon) + NUM_IMG*j
+        img_adv[index].addPrediction(list_img[j+1].predictionId)
+        img_adv[index].addHeatmap(list_img[j+1].heatmap)
     print("     ------------------")
     return plot_img, list_img
 
@@ -70,9 +72,10 @@ NUM_CLASSES = 1000
 IMG_SIZE = (224, 224)
 IMG_SHAPE = (224, 224, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 50 #Cantidad de imagenes de test
+NUM_IMG = 150 #Cantidad de imagenes de test
 TOTAL_IMG = 50000
 IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/val_classes/"
+EXECUTION_ID = "_execution_01" #Se usará para no sustituir variables de distintas ejecuciones
 
 EPSILON = [20000, 30000]
 ATTACK_NAME = ['FastGradientMethod']
@@ -98,9 +101,20 @@ model.layers[-1].activation = None
 print(model.summary())
 last_conv_layer_name = "top_activation"
 for atck in range(0, len(ATTACK_NAME)):
-    for index in range(0, NUM_IMG):
-        list_of_images, list_img_data = executeGradCam(index, classifier, EPSILON, atck)
-        aux.saveResults(list_of_images, list_img_data)
-        aux.plotDifference(index, img_test, img_adv, atck, EPSILON)
+    for num in range(0, NUM_IMG):
+        list_of_images, list_img_data = executeGradCam(num, classifier, EPSILON, atck)
+        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON)
+        if isSuccesfulExample:
+            aux.saveResults(list_of_images, list_img_data, EXECUTION_ID)
+            aux.plotDifference(num, img_test, img_adv, atck, EPSILON, EXECUTION_ID)
 aux.calculateAccuracy(img_test, img_adv, ATTACK_NAME, EPSILON)
+
+# Save variables
+try :
+    os.mkdir('variables')
+except OSError as e :
+    if e.errno != errno.EEXIST :
+        raise
+aux.saveVariable(img_test, "variables/testImages_efficientnetB0_random%simages%s.pkl" % (NUM_IMG, EXECUTION_ID))
+aux.saveVariable(img_adv, "variables/atcks_%s" % (ATTACK_NAME) + "_Epsilon_%s%s" % (EPSILON, EXECUTION_ID) + ".pkl")
 #https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
