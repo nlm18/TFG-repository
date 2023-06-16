@@ -11,9 +11,11 @@ from keras.applications.inception_v3 import decode_predictions as decode_incepti
 from keras.applications.inception_resnet_v2 import decode_predictions as decode_inceptionresnetv2
 import numpy as np
 import cv2
+import errno
 import gradCamInterface
 
 NETWORK_NAME = "xception"
+OBJECT = "Botella"
 
 import os
 import keras
@@ -102,9 +104,9 @@ def classifyImage(frame,network,network_name):
         P = decode_vgg16(preds)
         last_conv_layer_name = "block5_conv3"
     (imagenetID, label, prob) = P[0][0]
-    gradCam = executeGradCam(image, network, last_conv_layer_name)
-    frame_resized = cv2.resize(gradCam, (640,480))
-    cv2.putText(frameLabeled, "Label: {}, {:.2f}%".format(label, prob * 100),
+    #gradCam = executeGradCam(image, network, last_conv_layer_name)
+    #frame_resized = cv2.resize(gradCam, (640,480))
+    cv2.putText(frameLabeled, "Label: {}, {:.2f}%".format(label, prob * 100),#poner frameLabeled si no se quiere mostrar el gradcam
                 (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
     return frameLabeled
 
@@ -136,9 +138,12 @@ def webcamShow():
         # Classify and show the image
         frameDetection = classifyImage(frame, model,NETWORK_NAME)
         #cv2.imshow("webcam", frameDetection)
+        # Crea los directorios
+        createDirs(OBJECT)
         # Save the frames
-        cv2.imwrite(os.path.join('ImageNetWebcam','frames_raw','imageFrame_{:02d}'.format(i)+'.png'),frame)
-        cv2.imwrite(os.path.join('ImageNetWebcam','frames_detected', 'imageFrame_{:02d}'.format(i) + '.png'), frameDetection)
+        path="ImageNetWebcam/%s/frames_%s/imageFrame_{:02d}".format(i)+".png"
+        cv2.imwrite(path % (OBJECT, "raw"), frame)
+        cv2.imwrite(path % (OBJECT, "detected"), frameDetection)
 
     vc.release()
     cv2.destroyAllWindows()
@@ -168,6 +173,18 @@ def executeGradCam(img_array, model, last_conv_layer_name):
     gradCam_img = gradCamInterface.display_gradcam(img_array[0], heatmap, return_image=False,alpha=0.05)
 
     return gradCam_img
+
+def createDirs(OBJECT):
+    try :
+        os.makedirs('ImageNetWebcam/%s/frames_raw' % (OBJECT))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    try :
+        os.makedirs('ImageNetWebcam/%s/frames_detected' % (OBJECT))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
 
 if __name__ == '__main__':
     #example()
