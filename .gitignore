@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/Imagenet/ImagenetValidation.zip
+/Imagenet/val_classes/
+/EjemploFuncional_cifar10/img.jpg
