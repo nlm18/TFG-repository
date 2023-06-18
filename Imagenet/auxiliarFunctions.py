@@ -35,19 +35,26 @@ def searchImageInDirectory(num, path, img_per_directory):
     list_img = os.listdir(path)
     img_name = list_img[index]
     return img_name
-def loadImages(path, index_vector, size=(224,224), createImages=True):
+def loadImages(path, index_vector, size=(224,224), createImages=True, unclassified_images=False, realID =''):
     X_test = np.ndarray(shape=(len(index_vector), 224, 224, 3), dtype='float32')
     img_test = []
     if createImages == True :
         img_path = ""
         for index in range(0, len(index_vector)):
-            dir_name = searchDirectory(index_vector[index], path)
-            img_path = path + dir_name + "/"
-            file_name = searchImageInDirectory(index_vector[index], img_path, 50)
+            if unclassified_images:
+                img_path=path
+                files_names = os.listdir(path)
+                file_name=files_names[index]
+                ID = realID
+            else:
+                dir_name = searchDirectory(index_vector[index], path)
+                img_path = path + dir_name + "/"
+                file_name = searchImageInDirectory(index_vector[index], img_path, 50)
+                ID = dir_name
             img_path += file_name
             # Preprocess data
             X_test[index] = gradCamInterface.get_img_array_path(img_path, size)
-            imagen = Imagen(file_name, X_test[index], size, dir_name, '')
+            imagen = Imagen(file_name, X_test[index], size, ID, '')
             img_test.append(imagen)
             # preprocess_input(gradCamInterface.get_img_array_path(img_path[index], size))
     else :
@@ -142,7 +149,7 @@ def saveResults(list_of_images, imagen_data, exec_ID=''):
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    File_name = 'gradCam_examples_attack_method-%s/gradCam_example_image-%s_attack_method-%s%s.jpg' % (imagen_data[1].attackName, imagen_data[1].name, imagen_data[1].attackName, exec_ID)
+    File_name = 'gradCam_examples_attack_method-%s/%sgradCam_example_image-%s_attack_method-%s.jpg' % (imagen_data[1].attackName, exec_ID, imagen_data[1].name, imagen_data[1].attackName)
     fig.savefig(File_name)
 
 def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=''):
@@ -169,10 +176,12 @@ def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    File_name = 'Difference_between_orig_adv_method-%s/Difference_image-%s_attack_method-%s%s.jpg' % (adv_img.attackName, original_img[num].name, adv_img.attackName, exec_ID)
+    File_name = 'Difference_between_orig_adv_method-%s/%s_Difference_image-%s_attack_method-%s.jpg' % (adv_img.attackName, exec_ID, original_img[num].name, adv_img.attackName)
     plt.savefig(File_name)
 
-def isValidExample(num, original_img, adversarial_img, n_iter, epsilon):
+def isValidExample(num, original_img, adversarial_img, n_iter, epsilon, filter=True):
+    if filter == False:
+        return True
     saveSuccesfulExample = False
     total_img = len(original_img)
     # Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen

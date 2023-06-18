@@ -72,10 +72,12 @@ NUM_CLASSES = 1000
 IMG_SIZE = (224, 224)
 IMG_SHAPE = (224, 224, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 150 #Cantidad de imagenes de test
-TOTAL_IMG = 50000
-IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/val_classes/"
-EXECUTION_ID = "_execution_01" #Se usará para no sustituir variables de distintas ejecuciones
+NUM_IMG = 800 #Cantidad de imagenes de test
+TOTAL_IMG = 810
+IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
+#IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/val_classes/"
+EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
+realID='n04557648'
 
 EPSILON = [20000, 30000]
 ATTACK_NAME = ['FastGradientMethod']
@@ -90,7 +92,8 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=
 
 #Load Images
 randomVector = aux.generateRandomVector(NUM_IMG, TOTAL_IMG)
-x_test, img_test = aux.loadImages(IMG_PATH, randomVector) #Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
+x_test, img_test = aux.loadImages(IMG_PATH, randomVector, unclassified_images=True, realID=realID)
+#Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
 
 #Generate Adversarials
 img_adv = aux.generateAdversarialImages(img_test, x_test, ATTACK_NAME, EPSILON, classifier)
@@ -103,7 +106,7 @@ last_conv_layer_name = "top_activation"
 for atck in range(0, len(ATTACK_NAME)):
     for num in range(0, NUM_IMG):
         list_of_images, list_img_data = executeGradCam(num, classifier, EPSILON, atck)
-        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON)
+        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON, filter=False)
         if isSuccesfulExample:
             aux.saveResults(list_of_images, list_img_data, EXECUTION_ID)
             aux.plotDifference(num, img_test, img_adv, atck, EPSILON, EXECUTION_ID)
@@ -115,6 +118,6 @@ try :
 except OSError as e :
     if e.errno != errno.EEXIST :
         raise
-aux.saveVariable(img_test, "variables/testImages_efficientnetB0_random%simages%s.pkl" % (NUM_IMG, EXECUTION_ID))
-aux.saveVariable(img_adv, "variables/atcks_%s" % (ATTACK_NAME) + "_Epsilon_%s%s" % (EPSILON, EXECUTION_ID) + ".pkl")
+aux.saveVariable(img_test, "variables/%s_testImages_efficientnetB0_random%simages.pkl" % (EXECUTION_ID, NUM_IMG))
+aux.saveVariable(img_adv, "variables/%s_Adversarials_images_atcks_%s" % (ATTACK_NAME) + "_Epsilon_%s" % (EXECUTION_ID, EPSILON) + ".pkl")
 #https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
