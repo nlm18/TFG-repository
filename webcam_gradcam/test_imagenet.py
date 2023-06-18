@@ -9,13 +9,15 @@ from keras.applications.vgg16 import decode_predictions as decode_vgg16
 from keras.applications.xception import decode_predictions as decode_xception
 from keras.applications.inception_v3 import decode_predictions as decode_inceptionv3
 from keras.applications.inception_resnet_v2 import decode_predictions as decode_inceptionresnetv2
+from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientNetB0
+
 import numpy as np
 import cv2
 import errno
 import gradCamInterface
 
-NETWORK_NAME = "xception"
-OBJECT = "Botella"
+NETWORK_NAME = "EfficientNetB0"
+OBJECT = "water_bottle_efficientNetB0"
 
 import os
 import keras
@@ -75,7 +77,7 @@ def example():
 
 def classifyImage(frame,network,network_name):
     frameLabeled=np.copy(frame)
-    if network_name == "vgg16" :
+    if network_name == "vgg16" or network_name == "EfficientNetB0" :
         img_shape = (224,224)
     else:
         img_shape = (299,299)
@@ -103,6 +105,10 @@ def classifyImage(frame,network,network_name):
         preds = network.predict(image)
         P = decode_vgg16(preds)
         last_conv_layer_name = "block5_conv3"
+    elif network_name == "EfficientNetB0":
+        preds = network.predict(image)
+        P = decode_efficientNetB0(preds)
+        last_conv_layer_name = "top_activation"
     (imagenetID, label, prob) = P[0][0]
     #gradCam = executeGradCam(image, network, last_conv_layer_name)
     #frame_resized = cv2.resize(gradCam, (640,480))
@@ -113,7 +119,8 @@ def classifyImage(frame,network,network_name):
 def webcamShow():
 
     print("[INFO] loading network...")
-    model = Xception(include_top=True, weights="imagenet") #, input_tensor=Input(shape=(299, 299, 3))
+    model = EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
+        #Xception(include_top=True, weights="imagenet") #, input_tensor=Input(shape=(299, 299, 3))
 
     cv2.namedWindow("webcam")
     vc = cv2.VideoCapture(0)
@@ -141,9 +148,12 @@ def webcamShow():
         # Crea los directorios
         createDirs(OBJECT)
         # Save the frames
-        path="ImageNetWebcam/%s/frames_%s/imageFrame_{:02d}".format(i)+".png"
-        cv2.imwrite(path % (OBJECT, "raw"), frame)
-        cv2.imwrite(path % (OBJECT, "detected"), frameDetection)
+        list = os.listdir("ImageNetWebcam/%s/frames_%s/" % (OBJECT, "raw"))
+        num = len(list)
+        path="ImageNetWebcam/%s/frames_%s/imageFrame_%s.png"
+        cv2.imwrite(path % (OBJECT, "raw", num), frame)
+        cv2.imwrite(path % (OBJECT, "detected", num), frameDetection)
+        num+=1
 
     vc.release()
     cv2.destroyAllWindows()
@@ -186,7 +196,21 @@ def createDirs(OBJECT):
         if e.errno != errno.EEXIST :
             raise
 
+def rename():
+    path_org="ImageNetWebcam/water_bottle_efficientNet_soapDispenser/frames_%s/"
+    list_origin_raw = os.listdir( path_org % ("raw"))
+    list_origin_detected = os.listdir(path_org % ("detected"))
+    list_destination = os.listdir("ImageNetWebcam/%s/frames_%s" % (OBJECT, "raw"))
+    num = len(list_destination)
+    #nombre_nuevo = "ImageNetWebcam/%s/frames_%s/imageFrame_%s.png"
+    nombre_nuevo = path_org+"imageFrame_%s.png"
+    for i in range(len(list_origin_raw)):
+        os.rename(path_org%("raw")+list_origin_raw[i], nombre_nuevo % ("raw", num))
+        os.rename(path_org%("detected")+list_origin_detected[i], nombre_nuevo % ("detected", num))
+        num+=1
+
 if __name__ == '__main__':
     #example()
-    webcamShow()
+#    webcamShow()
+    rename()
     #networksTest()
