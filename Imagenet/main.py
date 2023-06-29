@@ -106,7 +106,7 @@ last_conv_layer_name = "top_activation"
 for atck in range(0, len(ATTACK_NAME)):
     for num in range(0, NUM_IMG):
         list_of_images, list_img_data = executeGradCam(num, classifier, EPSILON, atck)
-        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON, filter=False)
+        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON, filter=True)
         if isSuccesfulExample:
             aux.saveResults(list_of_images, list_img_data, EXECUTION_ID)
             aux.plotDifference(num, img_test, img_adv, atck, EPSILON, EXECUTION_ID)
@@ -119,5 +119,5 @@ except OSError as e :
     if e.errno != errno.EEXIST :
         raise
 aux.saveVariable(img_test, "variables/%s_testImages_efficientnetB0_random%simages.pkl" % (EXECUTION_ID, NUM_IMG))
-aux.saveVariable(img_adv, "variables/%s_Adversarials_images_atcks_%s" % (ATTACK_NAME) + "_Epsilon_%s" % (EXECUTION_ID, EPSILON) + ".pkl")
+aux.saveVariable(img_adv, "variables/%s_Adversarials_images_atcks_%s" % (EXECUTION_ID, ATTACK_NAME) + "_Epsilon_%s" % (EPSILON) + ".pkl")
 #https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network

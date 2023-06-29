@@ -5,6 +5,7 @@ from tensorflow import keras
 # Display
 from IPython.display import Image, display
 import matplotlib.cm as cm
+#https://keras.io/examples/vision/grad_cam/
 def get_img_array_path(img_path, size):
     # `img` is a PIL image of size 299x299
     img = keras.preprocessing.image.load_img(img_path, target_size=size)
