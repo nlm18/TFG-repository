@@ -72,11 +72,12 @@ NUM_CLASSES = 1000
 IMG_SIZE = (224, 224)
 IMG_SHAPE = (224, 224, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 800 #Cantidad de imagenes de test
-TOTAL_IMG = 810
-IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
-#IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/val_classes/"
-EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
+NUM_IMG = 300 #Cantidad de imagenes de test
+TOTAL_IMG = 50000
+#IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
+#EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
+EXECUTION_ID = "execution_03"
+IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/val_classes/"
 realID='n04557648'
 
 EPSILON = [20000, 30000]
@@ -92,8 +93,9 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=
 
 #Load Images
 randomVector = aux.generateRandomVector(NUM_IMG, TOTAL_IMG)
-x_test, img_test = aux.loadImages(IMG_PATH, randomVector, unclassified_images=True, realID=realID)
+x_test, img_test = aux.loadImages(IMG_PATH, randomVector)#, unclassified_images=True, realID=realID)
 #Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
+#Si unclassified_images = True: cargará las imagenes que no son de imagenet y por tanto no estan dentro de una carpeta con el valor de su ID
 
 #Generate Adversarials
 img_adv = aux.generateAdversarialImages(img_test, x_test, ATTACK_NAME, EPSILON, classifier)

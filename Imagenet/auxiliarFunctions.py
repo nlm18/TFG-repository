@@ -58,8 +58,18 @@ def loadImages(path, index_vector, size=(224,224), createImages=True, unclassifi
             img_test.append(imagen)
             # preprocess_input(gradCamInterface.get_img_array_path(img_path[index], size))
     else :
-        img_test = loadVariable("testImages_efficientnetB0_random%simages.pkl" % (len(index_vector)))
+        img_test = loadVariable(path+"testImages_efficientnetB0_random%simages.pkl" % (len(index_vector)))
     return X_test, img_test
+
+def loadImagesByID(data_path, data_ID):
+    list_files_names = os.listdir(data_path)
+    img_adv_name = [x for x in list_files_names if data_ID+"_Adv" in x]
+    img_orig_name = [x for x in list_files_names if data_ID+"_test" in x]
+
+    img_adv = loadVariable(data_path+img_adv_name[0])
+    img_orig = loadVariable(data_path+img_orig_name[0])
+    return img_orig, img_adv
+
 def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon):
     imagen = original.copyImage()
     imagen.modifyData(adv_data)
@@ -117,40 +127,46 @@ def getAttackMethod(name, classifier, epsilon):
     elif name == 'HopSkipJump':
         return HopSkipJump(classifier=classifier, max_iter=50, batch_size=4)
 
-def saveResults(list_of_images, imagen_data, exec_ID=''):
-    num_rows=len(imagen_data)
-    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(15, 15), subplot_kw={'xticks': [], 'yticks': []}, layout='compressed')
+def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
+    num_rows = len(imagen_data)
+    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(15, 15), subplot_kw={'xticks':[], 'yticks':[]},
+                            layout='compressed')
     ind = 0;
     ind_pred = 0;
-    for ax in axs.flat:
+    for ax in axs.flat :
         ax.imshow(list_of_images[ind])
-        #Ponemos titulos y nombre de los ejes
-        if ind == 0:
+        # Ponemos titulos y nombre de los ejes
+        if ind == 0 :
             ax.set_ylabel('Original')
 
-        if ind % 2 == 0: #Los pares tendran el valor predecido
-            if ind_pred==0:
-                predText = 'Predicted: %s'% (imagen_data[ind_pred].predictionName)
-            else:
+        if ind % 2 == 0 :  # Los pares tendran el valor predecido
+            if ind_pred == 0 :
+                predText = 'Predicted: %s' % (imagen_data[ind_pred].predictionName)
+            else :
                 predText = 'Predicted: %s' % (imagen_data[ind_pred].predictionName)
 
             ax.set_title(predText)
-            if ind > 1:
-                ax.set_ylabel('Adversarial, $\epsilon$=%s'% (imagen_data[ind_pred].epsilon))
-        else: #Los impares seran las imagenes con gradCam
-            ax.set_title('GradCam')
-            ind_pred+=1
-        ind+=1
+            if ind > 1 :
+                ax.set_ylabel('Adversarial, $\epsilon$=%s' % (imagen_data[ind_pred].epsilon))
+        else :  # Los impares seran las imagenes con gradCam
+            ax.set_title(resultColumn)
+            ind_pred += 1
+        ind += 1
     suptitle = 'Real value: %s, attack method used: %s' % (imagen_data[1].idName, imagen_data[1].attackName)
     # Cogemos el valor de la primera imagen adversaria pues todas tienen el mismo attackName menos la original(posicion 0)
     fig.suptitle(suptitle)
+    return fig
+
+def saveResults(list_of_images, imagen_data, exec_ID='', type=''):
+    fig = createFigure(list_of_images, imagen_data, resultColumn='GradCam '+type)
     try :
-        os.mkdir('gradCam_examples_attack_method-%s' % (imagen_data[1].attackName))
+        os.mkdir('gradCam_examples_attack_method-%s' % (imagen_data[1].attackName+"_"+type))
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    File_name = 'gradCam_examples_attack_method-%s/%sgradCam_example_image-%s_attack_method-%s.jpg' % (imagen_data[1].attackName, exec_ID, imagen_data[1].name, imagen_data[1].attackName)
-    fig.savefig(File_name)
+    file_name = 'gradCam_examples_attack_method-%s/%sgradCam_example_image-%s_attack_method-%s.jpg' % (imagen_data[1].attackName+"_"+type, exec_ID+"_"+type+"_", imagen_data[1].name, imagen_data[1].attackName)
+    fig.savefig(file_name)
+    plt.close()
 
 def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=''):
     div_entera = (len(epsilon) % 2 == 0)
@@ -178,6 +194,7 @@ def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=
             raise
     File_name = 'Difference_between_orig_adv_method-%s/%s_Difference_image-%s_attack_method-%s.jpg' % (adv_img.attackName, exec_ID, original_img[num].name, adv_img.attackName)
     plt.savefig(File_name)
+    plt.close()
 
 def isValidExample(num, original_img, adversarial_img, n_iter, epsilon, filter=True):
     if filter == False:
@@ -193,6 +210,15 @@ def isValidExample(num, original_img, adversarial_img, n_iter, epsilon, filter=T
                 saveSuccesfulExample = True
     return saveSuccesfulExample
 
+def isValidExample(sorted_list):
+    saveSuccesfulExample = False
+    # Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen
+    if sorted_list[0].predictionId == sorted_list[0].id:
+        for ind in range(1, len(sorted_list)):
+            # Si el adversario ha conseguido confundir a la red, se guarda la imagen
+            if sorted_list[ind].predictionId != sorted_list[ind].id:
+                saveSuccesfulExample = True
+    return saveSuccesfulExample
 def calculateAccuracy(img_test, img_adv, attackName, epsilon):
     total_img = len(img_test)
     # Porcentaje de acierto para las imagenes originales:
