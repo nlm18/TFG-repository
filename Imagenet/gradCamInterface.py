@@ -101,7 +101,7 @@ def display_gradcam(img, heatmap, alpha=0.4, color="jet"):
     # return Grad CAM
     return superimposed_img
 
-def display_superimposed_gradcam(img, heatmap):
+def display_gray_gradcam(img, heatmap, superimposed=True):
     heatmap = np.uint8(255 * heatmap)
 
     # Use jet colormap to colorize heatmap
@@ -116,17 +116,19 @@ def display_superimposed_gradcam(img, heatmap):
     heatmap_img = heatmap_img.resize((img.shape[1], img.shape[0]))
     heatmap_img = keras.preprocessing.image.img_to_array(heatmap_img)
 
-    superimposed_img_array = img*0
-    # Use heatmap as filter on original image
-    for channel in range(0, img.shape[2]):
-        for row in range(0, img.shape[0]):
-            for col in range(0, img.shape[1]):
-                superimposed_img_array[row, col, channel]= img[row, col, channel]*round(heatmap_img[row, col, channel]/255, 2)
+    if superimposed:
+        superimposed_img_array = img*0
+        # Use heatmap as filter on original image
+        for channel in range(0, img.shape[2]):
+            for row in range(0, img.shape[0]):
+                for col in range(0, img.shape[1]):
+                    superimposed_img_array[row, col, channel]= img[row, col, channel]*round(heatmap_img[row, col, channel]/255, 2)
 
-    superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img_array)
+        result = keras.preprocessing.image.array_to_img(superimposed_img_array)
+    else:
+        return heatmap_img
 
-    # return result
-    return superimposed_img
+    return result
 
 def decode_predictions(preds_oneHotEncoder, num_classes, classes_array):
     if len(classes_array) != num_classes:

@@ -3,6 +3,8 @@ from __future__ import print_function
 from Imagen import Imagen
 import gradCamInterface
 
+import cv2
+import csv
 import os
 import math
 import errno
@@ -210,7 +212,7 @@ def isValidExample(num, original_img, adversarial_img, n_iter, epsilon, filter=T
                 saveSuccesfulExample = True
     return saveSuccesfulExample
 
-def isValidExample(sorted_list):
+def isValidExample_sortedList(sorted_list):
     saveSuccesfulExample = False
     # Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen
     if sorted_list[0].predictionId == sorted_list[0].id:
@@ -241,3 +243,38 @@ def calculateAccuracy(img_test, img_adv, attackName, epsilon):
             accuracy = hits / total_img
             print("- Accuracy on adversarial test examples: {}%".format(accuracy * 100))
             print("\twith AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[eps]))
+
+def createCsvFile(filename, fieldnames):
+    #Comprobamos si existe el archivo
+    list_files_names = os.listdir("C:/Users/User/TFG-repository/Imagenet/")
+    csvName = [x for x in list_files_names if filename+".csv" in x]
+    if csvName == []:
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames,)
+            writer.writeheader()
+        return ""
+    else:
+        return "error"
+def addRowToCsvFile(filename, fieldnames, data):
+    with open(filename, 'a', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        row={}
+        for i in range(0,len(fieldnames)):
+            row[fieldnames[i]]=data[i]
+        writer.writerow(row)
+
+def saveHistogram(sorted_list):
+    for ind in range(0, len(sorted_list)) :
+        gray_heatmap = gradCamInterface.display_gray_gradcam(sorted_list[ind].data, sorted_list[ind].heatmap,
+                                                             superimposed=False)
+        gray_1channel = cv2.cvtColor(gray_heatmap, cv2.COLOR_RGB2GRAY)
+
+        intervalos = [0, 25, 50, 100, 150, 200, 255]  # indicamos los extremos de los intervalos
+
+        plt.hist(x=gray_1channel, bins=intervalos, rwidth=0.85 )
+        plt.title('Histograma del mapa de activación')
+        plt.xlabel('Intensidad del mapa de activación')
+        plt.ylabel('Frecuencia')
+        plt.xticks(intervalos)
+
+        plt.show()  # dibujamos el histograma
