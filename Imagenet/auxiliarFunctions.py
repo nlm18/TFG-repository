@@ -263,18 +263,35 @@ def addRowToCsvFile(filename, fieldnames, data):
             row[fieldnames[i]]=data[i]
         writer.writerow(row)
 
-def saveHistogram(sorted_list):
+def saveHistogram(sorted_list, DATA_ID):
+    try :
+        os.mkdir('histogram-%s' % (DATA_ID))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
     for ind in range(0, len(sorted_list)) :
         gray_heatmap = gradCamInterface.display_gray_gradcam(sorted_list[ind].data, sorted_list[ind].heatmap,
                                                              superimposed=False)
-        gray_1channel = cv2.cvtColor(gray_heatmap, cv2.COLOR_RGB2GRAY)
+        gray_1channel = cv2.cvtColor(gray_heatmap, cv2.COLOR_RGB2GRAY) #plt.imshow(gray_1channel, cmap='gray')
+        type = defineTypeOfAdversarial(sorted_list[ind])
 
-        intervalos = [0, 25, 50, 100, 150, 200, 255]  # indicamos los extremos de los intervalos
+        intervalos = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 255]  # indicamos los extremos de los intervalos
 
         plt.hist(x=gray_1channel, bins=intervalos, rwidth=0.85 )
-        plt.title('Histograma del mapa de activación')
+        plt.title('Histograma del mapa de activación, imagen %s' %(type))
         plt.xlabel('Intensidad del mapa de activación')
         plt.ylabel('Frecuencia')
         plt.xticks(intervalos)
 
-        plt.show()  # dibujamos el histograma
+        #plt.show()  # dibujamos el histograma
+        plt.savefig("histogram-%s/histogram_" % (DATA_ID) + type + "_" + sorted_list[ind].name)
+
+def defineTypeOfAdversarial(img):
+    if img.attackName == "":
+        if img.predictionId == img.id:
+            result = "Original"
+        else:
+            result = "AdvNatural"
+    else:
+        result = img.attackName+"_Eps_%s" %(img.epsilon)
+    return result

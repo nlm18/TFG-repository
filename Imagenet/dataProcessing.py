@@ -1,10 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 from tensorflow import keras
-#NO FUNSIONA: from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error #con 3chnn no funciona
 from skimage.metrics import structural_similarity as ssim
-from cv2 import PSNR
+import cv2
+
 
 import gradCamInterface
 import auxiliarFunctions as aux
@@ -34,7 +36,9 @@ NUM_IMG = len(img_orig)
 
 # ------------------------ Operaciones --------------------------------------
 execute_gray_gradcam=False
-calculate_metrics=True
+calculate_metrics=False
+execute_Histogram=True
+
 if calculate_metrics == True:
     metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Media", "Media/255*100 (%)", "Varianza", "Desviación Típica", "Norma Mascara", "Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
@@ -60,8 +64,11 @@ for num in range(0, NUM_IMG):
         for ind in range(0, len(sorted_list)) :
             metricsValue = []
             metricsValue = writeDataImageInCSV(metricsValue, sorted_list[ind])
+
             gray_heatmap = gradCamInterface.display_gray_gradcam(sorted_list[ind].data, sorted_list[ind].heatmap, superimposed=False)
+            gray_heatmap = cv2.cvtColor(gray_heatmap, cv2.COLOR_RGB2GRAY)  # plt.imshow(gray, cmap='gray')
             gray_heatmap_orig = gradCamInterface.display_gray_gradcam(sorted_list[0].data, sorted_list[0].heatmap, superimposed=False)
+            gray_heatmap_orig = cv2.cvtColor(gray_heatmap_orig, cv2.COLOR_RGB2GRAY)
             list_img_to_plot.append(gray_heatmap)
             metricsValue.append(round(gray_heatmap.mean(), 2))
             metricsValue.append(round(gray_heatmap.mean()/255*100, 2))
@@ -71,8 +78,8 @@ for num in range(0, NUM_IMG):
                 # La norma es la distancia euclidea
                 metricsValue.append(round(np.linalg.norm(gray_heatmap - gray_heatmap_orig), 2))
                 metricsValue.append(round(np.linalg.norm(sorted_list[ind].data - sorted_list[0].data),2))
-                metricsValue.append(round(np.square(np.subtract(gray_heatmap, gray_heatmap_orig)).mean(), 2))#MSE con mean_squared_error da error Found array with dim 3. None expected <= 2.
-                metricsValue.append(round(PSNR(gray_heatmap, gray_heatmap_orig), 2))
+                metricsValue.append(round(mean_squared_error(gray_heatmap, gray_heatmap_orig),2))#3ch; round(np.square(np.subtract(gray_heatmap, gray_heatmap_orig)).mean(), 2))#MSE con mean_squared_error da error Found array with dim 3. None expected <= 2.
+                metricsValue.append(round(cv2.PSNR(gray_heatmap, gray_heatmap_orig), 2))
                 metricsValue.append(round(ssim(gray_heatmap, gray_heatmap_orig, data_range=255, channel_axis=-1), 2))#SSIM. The higher the value, the more "similar" the two images are.
                 #DUDA: Le quito el tercer canal? no se supone que es gris?
             else:
@@ -84,3 +91,5 @@ for num in range(0, NUM_IMG):
 
             aux.addRowToCsvFile(DATA_ID+"_metrics.csv", metricsName, metricsValue)
 
+    if execute_Histogram == True:
+        aux.saveHistogram(sorted_list, DATA_ID)
