@@ -14,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump
-
+from keras.applications.efficientnet import decode_predictions
 # ------------------------ Funciones auxiliares ---------------------------------
 def generateRandomVector(n, total_img):
     A = []
@@ -48,7 +48,7 @@ def loadImages(path, index_vector, size=(224,224), createImages=True, unclassifi
                 files_names = os.listdir(path)
                 file_name=files_names[index]
                 ID = realID
-            else:
+            else:#Imagenet
                 dir_name = searchDirectory(index_vector[index], path)
                 img_path = path + dir_name + "/"
                 file_name = searchImageInDirectory(index_vector[index], img_path, 50)
@@ -74,11 +74,26 @@ def loadImagesByID(data_path, data_ID):
 
 def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon):
     imagen = original.copyImage()
-    imagen.modifyData(adv_data)
-    imagen.addAdversarialData(attackName, epsilon)
+    if original.advNatural:
+        imagen.modifyData(adv_data*0)
+    else:
+        imagen.modifyData(adv_data)
+        imagen.addAdversarialData(attackName, epsilon)
     return imagen
-def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False):
+def isValidToCreateAdversarialExample(originalImage, classifier, isImagenet):
+    img_array = gradCamInterface.get_img_array(originalImage.data)
+    preds = classifier.predict(img_array)
+    p = decode_predictions(preds, top=1)
+    originalImage.addPrediction(p[0][0][0])
+    if p[0][0][0] != originalImage.id:
+        if isImagenet == False:
+            originalImage.addAdvNatural(True)
+        return False
+    else:
+        return True
+def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False, isImagenet=True):
     # Para distintos valores de epsilon
+    img_array_test = np.ndarray(shape=(len(x_test), 224, 224, 3), dtype='float32')
     img_adv = [] # Guarda todas las imagenes seguidas, para recorrerlo:
                  # num+NUM_IMG*(indiceAtaque)*len(epsilon)+NUM_IMG*(indiceEpsilon)
     if createImages == True :
@@ -90,9 +105,15 @@ def generateAdversarialImages(originalImages, x_test, attackName, epsilon, class
                     filename = "Adv_Images_AttackMethod_" + attackName[atck] + "max_iter_50.pkl"
                     saveVariable(individual_atck, filename)
                 else :
+                    # Si es un adversario natural o no acierta la imagen original de imagenet no hace falta que genere imagenes con ataques
+                    for img in range(0, len(originalImages)) :
+                        if isValidToCreateAdversarialExample(originalImages[img], classifier, isImagenet) == False:
+                            img_array_test[img] = x_test[img]*0
+                        else:
+                            img_array_test[img] = x_test[img]
                     # Generate adversarial test examples
                     attack = getAttackMethod(attackName[atck], classifier, epsilon[i])
-                    x_test_adv = attack.generate(x=x_test)
+                    x_test_adv = attack.generate(x=img_array_test)
                     for img in range(0, len(originalImages)):
                         adv_imagen = createAdvImagenFromOriginal(originalImages[img], x_test_adv[img], attackName[atck], epsilon[i])
                         img_adv.append(adv_imagen)
@@ -130,12 +151,17 @@ def getAttackMethod(name, classifier, epsilon):
         return HopSkipJump(classifier=classifier, max_iter=50, batch_size=4)
 
 def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
-    num_rows = len(imagen_data)
+    if imagen_data[0].advNatural:
+        num_rows = 1
+    else:
+        num_rows = len(imagen_data)
     fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(15, 15), subplot_kw={'xticks':[], 'yticks':[]},
                             layout='compressed')
     ind = 0;
     ind_pred = 0;
     for ax in axs.flat :
+        if ind > 1 and imagen_data[0].advNatural:
+            break
         ax.imshow(list_of_images[ind])
         # Ponemos titulos y nombre de los ejes
         if ind == 0 :
@@ -154,7 +180,10 @@ def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
             ax.set_title(resultColumn)
             ind_pred += 1
         ind += 1
-    suptitle = 'Real value: %s, attack method used: %s' % (imagen_data[1].idName, imagen_data[1].attackName)
+    if imagen_data[0].advNatural :
+        suptitle = 'Real value: %s, Natural adversarial example' % (imagen_data[1].idName)
+    else:
+        suptitle = 'Real value: %s, attack method used: %s' % (imagen_data[1].idName, imagen_data[1].attackName)
     # Cogemos el valor de la primera imagen adversaria pues todas tienen el mismo attackName menos la original(posicion 0)
     fig.suptitle(suptitle)
     return fig
@@ -198,18 +227,22 @@ def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=
     plt.savefig(File_name)
     plt.close()
 
-def isValidExample(num, original_img, adversarial_img, n_iter, epsilon, filter=True):
+def isValidExample(num, original_img, adversarial_img, n_iter, epsilon, filter=True, isImagenet=True):
     if filter == False:
         return True
     saveSuccesfulExample = False
     total_img = len(original_img)
     # Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen
-    if original_img[num].predictionId == original_img[num].id :
+    if original_img[num].predictionId == original_img[num].id:
         for j in range(0, len(epsilon)) :
             index = num + total_img * n_iter * len(epsilon) + total_img * j
             # Si el adversario ha conseguido confundir a la red, se guarda la imagen
             if adversarial_img[index].predictionId != adversarial_img[index].id:
                 saveSuccesfulExample = True
+    # Si no es de imagenet se guarda si ha fallado la predicción de la imagen original
+    if original_img[num].advNatural and (isImagenet == False):
+        saveSuccesfulExample = True
+
     return saveSuccesfulExample
 
 def isValidExample_sortedList(sorted_list):

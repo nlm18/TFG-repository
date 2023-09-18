@@ -34,10 +34,11 @@ def executeGradCam(num, classifier, epsilon, n_iter):
     # Para la lista de imagenes que tendra la forma: [imagOriginal, adv_eps1, adv_eps2...]
     for ind in range(0, len(list_img)): #ind == 0 es la imagen sin modificar
         img_array.append(gradCamInterface.get_img_array(list_img[ind].data))
-        preds = classifier.predict(img_array[ind])
-        p = decode_predictions(preds, top=1) #El resultado es del tipo [[('n03814906', 'necklace', 9.88)]]
-        predicted.append(p[0][0])
-        list_img[ind].addPrediction(p[0][0][0])
+        if list_img[ind].predictionId =='':
+            preds = classifier.predict(img_array[ind])
+            p = decode_predictions(preds, top=1) #El resultado es del tipo [[('n03814906', 'necklace', 9.88)]]
+            predicted.append(p[0][0])
+            list_img[ind].addPrediction(p[0][0][0])
 
         # Generate class activation heatmap
         heatmap.append(gradCamInterface.make_gradcam_heatmap(img_array[ind], model, last_conv_layer_name))
@@ -49,10 +50,14 @@ def executeGradCam(num, classifier, epsilon, n_iter):
 
         if ind == 0:
             print("Real value: ", list_img[ind].idName)
-            print("Predicted benign example: ", list_img[ind].predictionName)
+            if list_img[ind].advNatural:
+                print("Predicted benign example: ", list_img[ind].predictionName, " NATURAL ADVERSARIAL EXAMPLE")
+            else:
+                print("Predicted benign example: ", list_img[ind].predictionName)
         else:
-            print("AttackMethod: %s with epsilon = %s" % (ATTACK_NAME[atck], epsilon[ind-1]))
-            print("Predicted adversarial example: ", list_img[ind].predictionName)
+            if list_img[0].advNatural == False:
+                print("AttackMethod: %s with epsilon = %s" % (ATTACK_NAME[atck], epsilon[ind-1]))
+                print("Predicted adversarial example: ", list_img[ind].predictionName)
 
         plot_img.append(keras.preprocessing.image.array_to_img(list_img[ind].data))
         plot_img.append(gradCam_img[ind])
@@ -68,16 +73,16 @@ def executeGradCam(num, classifier, epsilon, n_iter):
     return plot_img, list_img
 
 # ------------------------ Constantes ---------------------------------------
-NUM_CLASSES = 1000
+NUM_CLASSES = 1000 #imagenet=1000
 IMG_SIZE = (224, 224)
 IMG_SHAPE = (224, 224, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 300 #Cantidad de imagenes de test
-TOTAL_IMG = 50000
-#IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
+NUM_IMG = 100 #Cantidad de imagenes de test
+TOTAL_IMG = 869 #Cantidad de imagenes de las que se disponen, imagenet=50000
+IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
 #EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
-EXECUTION_ID = "execution_03"
-IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/val_classes/"
+EXECUTION_ID = "Prueba_WebcamData_efficientNetB0_18sept"
+#IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/movil/"#cambiar parametros de entrada de loadImages segun si son de imagenet o no
 realID='n04557648'
 
 EPSILON = [20000, 30000]
@@ -93,12 +98,12 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=
 
 #Load Images
 randomVector = aux.generateRandomVector(NUM_IMG, TOTAL_IMG)
-x_test, img_test = aux.loadImages(IMG_PATH, randomVector)#, unclassified_images=True, realID=realID)
+x_test, img_test = aux.loadImages(IMG_PATH, randomVector, unclassified_images=True, realID=realID)# Quitar 2 ultimos parametros para imagenet
 #Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
 #Si unclassified_images = True: cargará las imagenes que no son de imagenet y por tanto no estan dentro de una carpeta con el valor de su ID
 
 #Generate Adversarials
-img_adv = aux.generateAdversarialImages(img_test, x_test, ATTACK_NAME, EPSILON, classifier)
+img_adv = aux.generateAdversarialImages(img_test, x_test, ATTACK_NAME, EPSILON, classifier, isImagenet=False)
 
 #GRAD CAM
 # Remove last layer's softmax
@@ -107,10 +112,10 @@ print(model.summary())
 last_conv_layer_name = "top_activation"
 for atck in range(0, len(ATTACK_NAME)):
     for num in range(0, NUM_IMG):
-        list_of_images, list_img_data = executeGradCam(num, classifier, EPSILON, atck)
-        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON, filter=True)
+        img_figure, list_img_data = executeGradCam(num, classifier, EPSILON, atck)
+        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON, isImagenet=False)
         if isSuccesfulExample:
-            aux.saveResults(list_of_images, list_img_data, EXECUTION_ID)
+            aux.saveResults(img_figure, list_img_data, EXECUTION_ID)
             aux.plotDifference(num, img_test, img_adv, atck, EPSILON, EXECUTION_ID)
 aux.calculateAccuracy(img_test, img_adv, ATTACK_NAME, EPSILON)
 

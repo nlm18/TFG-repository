@@ -1,6 +1,6 @@
 from idDict import idDictionary
 class Imagen:
-    def __init__(self, imageName, imageData, imageSize, imageId, attackName='', epsilon=''):
+    def __init__(self, imageName, imageData, imageSize, imageId, attackName='', epsilon='', isAdvNatural=False):
         self.name = imageName
         self.data = imageData
         self.heatmap = 0
@@ -11,6 +11,7 @@ class Imagen:
         self.predictionName = ''
         self.attackName = attackName #Indica el metodo de ataque con el cual se ha generado la imagen
         self.epsilon = epsilon #Indica el epsilon del metodo de ataque con el cual se ha generado la imagen
+        self.advNatural = isAdvNatural #Indica si es un adversario natural
 
     def addPrediction(self, predID):
         self.predictionId = predID
@@ -29,3 +30,6 @@ class Imagen:
 
     def addHeatmap(self, heatmapData):
         self.heatmap = heatmapData
+
+    def addAdvNatural(self, isAdvNatural):
+        self.advNatural = isAdvNatural
