@@ -125,7 +125,7 @@ def webcamShow():
     cv2.namedWindow("webcam")
     vc = cv2.VideoCapture(0)
 
-    N_FRAMES = 100
+    N_FRAMES = 200
 
     while True:
         # Capture the frame
@@ -211,6 +211,6 @@ def rename():
 
 if __name__ == '__main__':
     #example()
-#    webcamShow()
-    rename()
+    webcamShow()
+   # rename()
     #networksTest()
