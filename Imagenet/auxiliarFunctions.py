@@ -72,17 +72,19 @@ def loadImagesByID(data_path, data_ID):
     img_orig = loadVariable(data_path+img_orig_name[0])
     return img_orig, img_adv
 
-def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon):
+def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon, predictionID=0):
     imagen = original.copyImage()
     if original.advNatural:
         imagen.modifyData(adv_data*0)
     else:
         imagen.modifyData(adv_data)
         imagen.addAdversarialData(attackName, epsilon)
+        if predictionID  != 0:
+            imagen.addPrediction(predictionID)
     return imagen
 def isValidToCreateAdversarialExample(originalImage, classifier, isImagenet):
     img_array = gradCamInterface.get_img_array(originalImage.data)
-    preds = classifier.predict(img_array)
+    preds = classifier.model.predict(img_array)
     p = decode_predictions(preds, top=1)
     originalImage.addPrediction(p[0][0][0])
     if p[0][0][0] != originalImage.id:
@@ -91,6 +93,16 @@ def isValidToCreateAdversarialExample(originalImage, classifier, isImagenet):
         return False
     else:
         return True
+
+def isAnAdversarialExample(originalImage, adv_img, classifier):
+    isValid = False
+    adv_array = gradCamInterface.get_img_array(adv_img)
+    preds = classifier.predict(adv_array)
+    p = decode_predictions(preds, top=1)
+    if p[0][0][0] != originalImage.id:
+        isValid = True
+    return isValid, p[0][0][0]
+
 def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False, isImagenet=True):
     # Para distintos valores de epsilon
     img_array_test = np.ndarray(shape=(len(x_test), 224, 224, 3), dtype='float32')
@@ -129,6 +141,29 @@ def generateAdversarialImages(originalImages, x_test, attackName, epsilon, class
             else :
                 img_adv.append(loadVariable(filename))
     return img_adv
+
+def generateAnAdversarialImage(originalImage, x_test, attackName, classifier, isImagenet=True):
+    # Para distintos valores de epsilon
+    img_array_test = np.ndarray(shape=(1, 224, 224, 3), dtype='float32')
+    epsilon = 2500
+    # Si es un adversario natural o no acierta la imagen original de imagenet no hace falta que genere imagenes con ataques
+    if isValidToCreateAdversarialExample(originalImage, classifier, isImagenet) == False:
+        img_array_test[0] = x_test*0
+    else:
+        img_array_test[0] = x_test
+    # Generate adversarial test examples
+    while True:
+        attack = getAttackMethod(attackName, classifier, epsilon)
+        x_test_adv = attack.generate(x=img_array_test)
+        isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
+        if isValidAdversarial:
+            break
+        else:
+            epsilon += 2500
+
+    adv_imagen = createAdvImagenFromOriginal(originalImage, x_test_adv[0], attackName, epsilon, predictionID)
+    return adv_imagen
+
 def saveVariable(datos, filename):
     with open(filename, "wb") as f:
         pickle.dump(datos, f)
@@ -188,15 +223,41 @@ def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
     fig.suptitle(suptitle)
     return fig
 
-def saveResults(list_of_images, imagen_data, exec_ID='', type=''):
-    fig = createFigure(list_of_images, imagen_data, resultColumn='GradCam '+type)
+def saveResults(list_of_images, imagen_data, exec_ID=''):
+    fig = createFigure(list_of_images, imagen_data, resultColumn='GradCam ')
     try :
-        os.mkdir('gradCam_examples_attack_method-%s' % (imagen_data[1].attackName+"_"+type))
+        os.mkdir('gradCam_examples_%s' % (exec_ID))
+        os.mkdir('gradCam_examples_%s/NaturalAdversarial' % (exec_ID) )
+        os.mkdir('gradCam_examples_%s/ArtificialAdversarial' % (exec_ID) )
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    file_name = 'gradCam_examples_attack_method-%s/%sgradCam_example_image-%s_attack_method-%s.jpg' % (imagen_data[1].attackName+"_"+type, exec_ID+"_"+type+"_", imagen_data[1].name, imagen_data[1].attackName)
+    if imagen_data[0].advNatural:
+        file_name = 'gradCam_examples_%s/NaturalAdversarial/gradCam_example_image-%s.jpg' % ( exec_ID, imagen_data[1].name)
+    else:
+        file_name = 'gradCam_examples_%s/ArtificialAdversarial/gradCam_example_image-%s_attack_method-%s.jpg' % ( exec_ID, imagen_data[1].name, imagen_data[1].attackName)
+
     fig.savefig(file_name)
+    plt.close()
+
+def plotDifferenceBetweenImages(original_img, adv_img, exec_ID=''):
+    resultado = (abs(original_img.data-adv_img.data))*10000
+    #Ponemos titulo
+    plt.xticks([])
+    plt.yticks([])
+    plt.xlabel('Adv-Orig, $\epsilon$=%s'% (adv_img.epsilon))
+    plt.imshow(resultado.astype(np.uint8))
+    suptitle = 'Attack method used: %s' % (adv_img.attackName)
+    plt.suptitle(suptitle)
+    if original_img.advNatural == False :
+        try :
+            os.mkdir('gradCam_examples_%s/Difference_between_orig_adv_method-%s' % (exec_ID, adv_img.attackName))
+        except OSError as e :
+            if e.errno != errno.EEXIST :
+                raise
+
+        File_name = 'gradCam_examples_%s/Difference_between_orig_adv_method-%s/Difference_image-%s.jpg' % (exec_ID, adv_img.attackName, original_img.name)
+        plt.savefig(File_name)
     plt.close()
 
 def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=''):
@@ -209,7 +270,7 @@ def plotDifference(num, original_img, adversarial_img, n_iter, epsilon, exec_ID=
     for j in range(0, len(epsilon)):
         NUM_IMG = len(original_img)
         adv_img = adversarial_img[num+NUM_IMG*n_iter*len(epsilon)+NUM_IMG*j]
-        resultado = (abs(original_img[num].data-adv_img.data))*100000
+        resultado = (abs(original_img[num].data-adv_img.data))*10000
         #Ponemos titulo
         plt.subplot(num_rows, num_col, j + 1)
         plt.xticks([])
@@ -253,6 +314,9 @@ def isValidExample_sortedList(sorted_list):
             # Si el adversario ha conseguido confundir a la red, se guarda la imagen
             if sorted_list[ind].predictionId != sorted_list[ind].id:
                 saveSuccesfulExample = True
+    # Si no es de imagenet se guarda si ha fallado la predicción de la imagen original
+    if sorted_list[0].advNatural:
+        saveSuccesfulExample = True
     return saveSuccesfulExample
 def calculateAccuracy(img_test, img_adv, attackName, epsilon):
     total_img = len(img_test)
@@ -265,7 +329,6 @@ def calculateAccuracy(img_test, img_adv, attackName, epsilon):
     print("- Accuracy on benign test examples: {}%".format(accuracy * 100))
 
     # Porcentaje de acierto para las imagenes adversarias:
-
     for atck in range(0, len(attackName)):
         for eps in range(0, len(epsilon)):
             hits = 0
@@ -276,6 +339,16 @@ def calculateAccuracy(img_test, img_adv, attackName, epsilon):
             accuracy = hits / total_img
             print("- Accuracy on adversarial test examples: {}%".format(accuracy * 100))
             print("\twith AttackMethod: %s with epsilon = %s" % (attackName[atck], epsilon[eps]))
+
+def calculatePercentageNaturalAdversarial(img_test):
+    total_img = len(img_test)
+    # Porcentaje de adversarias naturales para las imagenes originales:
+    hits = 0
+    for ind in range(0, total_img):
+        if img_test[ind].advNatural == True:
+            hits+=1
+    percentage = hits / total_img
+    print("- Percentage of natural adversarial images: {}%".format(percentage * 100))
 
 def createCsvFile(filename, fieldnames):
     #Comprobamos si existe el archivo
@@ -328,3 +401,13 @@ def defineTypeOfAdversarial(img):
     else:
         result = img.attackName+"_Eps_%s" %(img.epsilon)
     return result
+
+def printResultsPerImage(orig, adv):
+    print("Real value: ", orig.idName)
+    if orig.advNatural :
+        print("Predicted benign example: ", orig.predictionName, " NATURAL ADVERSARIAL EXAMPLE")
+    else :
+        print("Predicted benign example: ", orig.predictionName)
+    if orig.advNatural == False :
+        print("AttackMethod: %s with epsilon = %s" % (adv.attackName, adv.epsilon))
+        print("Predicted adversarial example: ", adv.predictionName)

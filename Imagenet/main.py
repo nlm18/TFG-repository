@@ -72,20 +72,46 @@ def executeGradCam(num, classifier, epsilon, n_iter):
     print("     ------------------")
     return plot_img, list_img
 
+def executeGradCam(orig, adv) :
+    # Prepare image
+    list_img = []  # Orig, adversaria
+    list_img.append(orig)
+    list_img.append(adv)
+    plot_img = []
+
+    # Generate class activation heatmap
+    for ind in range(0, len(list_img)):
+        img_array = gradCamInterface.get_img_array(list_img[ind].data)
+        heatmap = gradCamInterface.make_gradcam_heatmap(img_array, model, last_conv_layer_name)
+        list_img[ind].addHeatmap(heatmap)
+
+        # Display heatmap. Ya esta entre 0-255
+        gradCam_img = gradCamInterface.display_gradcam(list_img[ind].data, heatmap)
+
+        img_rgb = list_img[ind].data[:, :, [2, 1, 0]]  # RGB
+        plot_img.append(keras.preprocessing.image.array_to_img(img_rgb))
+        plot_img.append(gradCam_img)
+
+    orig.addHeatmap(list_img[0].heatmap)
+    adv.addHeatmap(list_img[1].heatmap)
+    aux.printResultsPerImage(orig, adv)
+    print("     ------------------")
+    return plot_img, list_img
+
 # ------------------------ Constantes ---------------------------------------
 NUM_CLASSES = 1000 #imagenet=1000
 IMG_SIZE = (224, 224)
 IMG_SHAPE = (224, 224, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 100 #Cantidad de imagenes de test
-TOTAL_IMG = 869 #Cantidad de imagenes de las que se disponen, imagenet=50000
+NUM_IMG = 1#399 #Cantidad de imagenes de test
+TOTAL_IMG = 1399 #Cantidad de imagenes de las que se disponen, imagenet=50000
 IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
 #EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
-EXECUTION_ID = "Prueba_WebcamData_efficientNetB0_18sept"
+EXECUTION_ID = "WebcamData_ValidAdversarial"
 #IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/movil/"#cambiar parametros de entrada de loadImages segun si son de imagenet o no
 realID='n04557648'
 
-EPSILON = [20000, 30000]
+#EPSILON = [20000, 30000]
 ATTACK_NAME = ['FastGradientMethod']
 
 # ------------------------ Código principal ---------------------------------
@@ -103,21 +129,28 @@ x_test, img_test = aux.loadImages(IMG_PATH, randomVector, unclassified_images=Tr
 #Si unclassified_images = True: cargará las imagenes que no son de imagenet y por tanto no estan dentro de una carpeta con el valor de su ID
 
 #Generate Adversarials
-img_adv = aux.generateAdversarialImages(img_test, x_test, ATTACK_NAME, EPSILON, classifier, isImagenet=False)
+img_adv=[]
+for atck in range(0, len(ATTACK_NAME)) :
+    individual_atck = []
+    for num in range(0, len(img_test)):
+        img_adv.append(aux.generateAnAdversarialImage(img_test[num], x_test[num], ATTACK_NAME[atck], classifier, isImagenet=False))
+
+    individual_atck = img_adv[atck:atck+len(img_test)]
+    filename = "Adv_Images_AttackMethod_" + ATTACK_NAME[atck] + ".pkl"
+    aux.saveVariable(individual_atck, filename)
+#Hasta aqui tenemos una lista de objetos imagenes para originales y adversarias, en ambas se ha predicho ya la clase
 
 #GRAD CAM
 # Remove last layer's softmax
 model.layers[-1].activation = None
-print(model.summary())
+#print(model.summary())
 last_conv_layer_name = "top_activation"
 for atck in range(0, len(ATTACK_NAME)):
     for num in range(0, NUM_IMG):
-        img_figure, list_img_data = executeGradCam(num, classifier, EPSILON, atck)
-        isSuccesfulExample = aux.isValidExample(num, img_test, img_adv, atck, EPSILON, isImagenet=False)
-        if isSuccesfulExample:
-            aux.saveResults(img_figure, list_img_data, EXECUTION_ID)
-            aux.plotDifference(num, img_test, img_adv, atck, EPSILON, EXECUTION_ID)
-aux.calculateAccuracy(img_test, img_adv, ATTACK_NAME, EPSILON)
+        img_figure, list_img_data = executeGradCam(img_test[num], img_adv[num])
+        aux.saveResults(img_figure, list_img_data, EXECUTION_ID)
+        aux.plotDifferenceBetweenImages(img_test[num], img_adv[num], EXECUTION_ID)
+aux.calculatePercentageNaturalAdversarial(img_test)
 
 # Save variables
 try :
@@ -126,5 +159,5 @@ except OSError as e :
     if e.errno != errno.EEXIST :
         raise
 aux.saveVariable(img_test, "variables/%s_testImages_efficientnetB0_random%simages.pkl" % (EXECUTION_ID, NUM_IMG))
-aux.saveVariable(img_adv, "variables/%s_Adversarials_images_atcks_%s" % (EXECUTION_ID, ATTACK_NAME) + "_Epsilon_%s" % (EPSILON) + ".pkl")
+aux.saveVariable(img_adv, "variables/%s_Adversarials_images_atcks_%s" % (EXECUTION_ID, ATTACK_NAME) + ".pkl")
 #https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network

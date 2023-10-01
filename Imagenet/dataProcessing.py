@@ -6,6 +6,7 @@ from tensorflow import keras
 from sklearn.metrics import mean_squared_error #con 3chnn no funciona
 from skimage.metrics import structural_similarity as ssim
 import cv2
+import xlwt #Para escribir en excel
 
 
 import gradCamInterface
@@ -25,33 +26,40 @@ def writeDataImageInCSV(data, img):
         data.append(img.epsilon)
     return data
 
+def sortListOfImages(areMultipleAttacks, num):
+    # Se ordenan las imagenes como [img_orig, img_adv1eps1, img_adv1eps2, img_adv2eps1, img_adv2eps2, ...]
+    sorted_list = []
+    sorted_list.append(img_orig[num])
+    if areMultipleAttacks:
+        for atck_iter in range(0, NUM_ATCKS):
+            for eps_iter in range(0, NUM_EPS):
+                pos = num+NUM_IMG*atck_iter*NUM_EPS+NUM_IMG*eps_iter
+                sorted_list.append(img_adv[pos])#Guarda todas las imagenes seguidas
+    else:
+        sorted_list.append(img_adv[num])
+    return sorted_list
+
 # ------------------------ Constantes ---------------------------------------
 DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variables/"
-DATA_ID = "execution_02"
+DATA_ID = "WebcamData_ValidAdversarial"
 NUM_ATCKS = 1 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
-NUM_EPS = 2  #Numero de epsilon distintos que se usaron cuando se guardaron las imagenes
+NUM_EPS = 1  #Numero de epsilon distintos que se usaron cuando se guardaron las imagenes
 
 img_orig, img_adv = aux.loadImagesByID(DATA_PATH, DATA_ID)
 NUM_IMG = len(img_orig)
 
 # ------------------------ Operaciones --------------------------------------
-execute_gray_gradcam=False
-calculate_metrics=False
+execute_gray_gradcam=True
+calculate_metrics=True
 execute_Histogram=True
 
 if calculate_metrics == True:
     metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Media", "Media/255*100 (%)", "Varianza", "Desviación Típica", "Norma Mascara", "Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
-#Se ordenan las imagenes como [img_orig, img_adv1eps1, img_adv1eps2, img_adv2eps1, img_adv2eps2, ...]
-for num in range(0, NUM_IMG):
-    sorted_list = []
-    list_img_to_plot = []
-    sorted_list.append(img_orig[num])
-    for atck_iter in range(0, NUM_ATCKS):
-        for eps_iter in range(0, NUM_EPS):
-            pos = num+NUM_IMG*atck_iter*NUM_EPS+NUM_IMG*eps_iter
-            sorted_list.append(img_adv[pos])#Guarda todas las imagenes seguidas
 
+for num in range(0, NUM_IMG):
+    list_img_to_plot = []
+    sorted_list = sortListOfImages(False, num)
 
     if execute_gray_gradcam == True:
         if aux.isValidExample_sortedList(sorted_list) :# Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen
@@ -62,6 +70,8 @@ for num in range(0, NUM_IMG):
 
     if calculate_metrics == True:
         for ind in range(0, len(sorted_list)) :
+            if sorted_list[0].advNatural and (ind != 0): #Si es adversaria natural, la artifical solo son ceros.
+                break
             metricsValue = []
             metricsValue = writeDataImageInCSV(metricsValue, sorted_list[ind])
 

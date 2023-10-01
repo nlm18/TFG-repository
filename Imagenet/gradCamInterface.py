@@ -5,15 +5,19 @@ from tensorflow import keras
 # Display
 from IPython.display import Image, display
 import matplotlib.cm as cm
+import cv2
 #https://keras.io/examples/vision/grad_cam/
 def get_img_array_path(img_path, size):
     # `img` is a PIL image of size 299x299
-    img = keras.preprocessing.image.load_img(img_path, target_size=size)
+    img = cv2.imread(img_path) #BGR
+    img_resized=cv2.resize(img, size)
+
+    #img = keras.preprocessing.image.load_img(img_path, target_size=size)
     # `array` is a float32 Numpy array of shape (299, 299, 3)
-    array = keras.preprocessing.image.img_to_array(img)
+    #array = keras.preprocessing.image.img_to_array(img)
     # We add a dimension to transform our array into a "batch"
     # of size (1, 299, 299, 3)
-    array = np.expand_dims(array, axis=0)
+    array = np.expand_dims(img_resized, axis=0)
     return array
 
 def get_img_array(img_array):
@@ -95,7 +99,8 @@ def display_gradcam(img, heatmap, alpha=0.4, color="jet"):
     jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
 
     # Superimpose the heatmap on original image
-    superimposed_img_array = jet_heatmap * alpha + img
+    img_rgb = img[:, :, [2, 1, 0]]  # RGB
+    superimposed_img_array = jet_heatmap * alpha + img_rgb
     superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img_array)
 
     # return Grad CAM
