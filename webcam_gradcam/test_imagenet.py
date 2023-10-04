@@ -16,8 +16,8 @@ import cv2
 import errno
 import gradCamInterface
 
-NETWORK_NAME = "EfficientNetB0"
-OBJECT = "water_bottle_efficientNetB0"
+NETWORK_NAME = "xception"
+OBJECT = "waterBottle_xception"
 
 import os
 import keras
@@ -119,21 +119,23 @@ def classifyImage(frame,network,network_name):
 def webcamShow():
 
     print("[INFO] loading network...")
-    model = EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
-        #Xception(include_top=True, weights="imagenet") #, input_tensor=Input(shape=(299, 299, 3))
+    #model = EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
+    model = Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
 
     cv2.namedWindow("webcam")
     vc = cv2.VideoCapture(0)
 
-    N_FRAMES = 200
+    N_FRAMES = 1000
 
     while True:
         # Capture the frame
         next, frame = vc.read()
         #cv2.imshow("webcam", frame)
         # Classify and show the image
-        frameDetection=classifyImage(frame,model,NETWORK_NAME)
-        cv2.imshow("webcam", frameDetection)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frameDetection=classifyImage(frame_rgb,model,NETWORK_NAME)
+        frame_bgr = cv2.cvtColor(frameDetection, cv2.COLOR_RGB2BGR)
+        cv2.imshow("webcam", frame_bgr)
         # When a key is pressed, start recording
         if cv2.waitKey(50) >= 0:#Enter
             break
@@ -143,7 +145,7 @@ def webcamShow():
         next, frame = vc.read()
         # cv2.imshow("webcam", frame)
         # Classify and show the image
-        frameDetection = classifyImage(frame, model,NETWORK_NAME)
+        frameDetection = classifyImage(frame, model, NETWORK_NAME)
         #cv2.imshow("webcam", frameDetection)
         # Crea los directorios
         createDirs(OBJECT)
