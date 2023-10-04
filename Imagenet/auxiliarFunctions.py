@@ -223,19 +223,23 @@ def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
     fig.suptitle(suptitle)
     return fig
 
-def saveResults(list_of_images, imagen_data, exec_ID=''):
+def saveResults(list_of_images, imagen_data, exec_ID='', type=''):
     fig = createFigure(list_of_images, imagen_data, resultColumn='GradCam ')
     try :
         os.mkdir('gradCam_examples_%s' % (exec_ID))
-        os.mkdir('gradCam_examples_%s/NaturalAdversarial' % (exec_ID) )
-        os.mkdir('gradCam_examples_%s/ArtificialAdversarial' % (exec_ID) )
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    try :
+        os.mkdir('gradCam_examples_%s/NaturalAdversarial%s' % (exec_ID, type) )
+        os.mkdir('gradCam_examples_%s/ArtificialAdversarial%s' % (exec_ID, type) )
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
     if imagen_data[0].advNatural:
-        file_name = 'gradCam_examples_%s/NaturalAdversarial/gradCam_example_image-%s.jpg' % ( exec_ID, imagen_data[1].name)
+        file_name = 'gradCam_examples_%s/NaturalAdversarial%s/gradCam_example_image-%s.jpg' % ( exec_ID, type, imagen_data[1].name)
     else:
-        file_name = 'gradCam_examples_%s/ArtificialAdversarial/gradCam_example_image-%s_attack_method-%s.jpg' % ( exec_ID, imagen_data[1].name, imagen_data[1].attackName)
+        file_name = 'gradCam_examples_%s/ArtificialAdversarial%s/gradCam_example_image-%s_attack_method-%s.jpg' % ( exec_ID, type, imagen_data[1].name, imagen_data[1].attackName)
 
     fig.savefig(file_name)
     plt.close()

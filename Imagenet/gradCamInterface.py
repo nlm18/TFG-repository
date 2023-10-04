@@ -10,7 +10,8 @@ import cv2
 def get_img_array_path(img_path, size):
     # `img` is a PIL image of size 299x299
     img = cv2.imread(img_path) #BGR
-    img_resized=cv2.resize(img, size)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) #RGB
+    img_resized = cv2.resize(img_rgb, size)
 
     #img = keras.preprocessing.image.load_img(img_path, target_size=size)
     # `array` is a float32 Numpy array of shape (299, 299, 3)
@@ -99,8 +100,7 @@ def display_gradcam(img, heatmap, alpha=0.4, color="jet"):
     jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
 
     # Superimpose the heatmap on original image
-    img_rgb = img[:, :, [2, 1, 0]]  # RGB
-    superimposed_img_array = jet_heatmap * alpha + img_rgb
+    superimposed_img_array = jet_heatmap * alpha + img
     superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img_array)
 
     # return Grad CAM

@@ -49,9 +49,9 @@ img_orig, img_adv = aux.loadImagesByID(DATA_PATH, DATA_ID)
 NUM_IMG = len(img_orig)
 
 # ------------------------ Operaciones --------------------------------------
-execute_gray_gradcam=True
-calculate_metrics=True
-execute_Histogram=True
+execute_gray_gradcam=False #tarda
+calculate_metrics=True #tarda 'poco'
+execute_Histogram=False #tarda mucho
 
 if calculate_metrics == True:
     metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Media", "Media/255*100 (%)", "Varianza", "Desviación Típica", "Norma Mascara", "Norma Imagen", "MSE", "PSNR", "SSIM"]
@@ -66,7 +66,7 @@ for num in range(0, NUM_IMG):
             for ind in range(0, len(sorted_list)):
                 list_img_to_plot.append(keras.preprocessing.image.array_to_img(sorted_list[ind].data))
                 list_img_to_plot.append(gradCamInterface.display_gray_gradcam(sorted_list[ind].data, sorted_list[ind].heatmap))
-            aux.saveResults(list_img_to_plot, sorted_list, DATA_ID, "superimposed")
+            aux.saveResults(list_img_to_plot, sorted_list, DATA_ID, "_Superimposed")
 
     if calculate_metrics == True:
         for ind in range(0, len(sorted_list)) :
@@ -89,7 +89,7 @@ for num in range(0, NUM_IMG):
                 metricsValue.append(round(np.linalg.norm(gray_heatmap - gray_heatmap_orig), 2))
                 metricsValue.append(round(np.linalg.norm(sorted_list[ind].data - sorted_list[0].data),2))
                 metricsValue.append(round(mean_squared_error(gray_heatmap, gray_heatmap_orig),2))#3ch; round(np.square(np.subtract(gray_heatmap, gray_heatmap_orig)).mean(), 2))#MSE con mean_squared_error da error Found array with dim 3. None expected <= 2.
-                metricsValue.append(round(cv2.PSNR(gray_heatmap, gray_heatmap_orig), 2))
+                metricsValue.append(round(cv2.PSNR(gray_heatmap, gray_heatmap_orig), 2)) #Peak Signal-to-Noise Ratio (PSNR)
                 metricsValue.append(round(ssim(gray_heatmap, gray_heatmap_orig, data_range=255, channel_axis=-1), 2))#SSIM. The higher the value, the more "similar" the two images are.
                 #DUDA: Le quito el tercer canal? no se supone que es gris?
             else:
