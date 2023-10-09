@@ -1,6 +1,6 @@
 from idDict import idDictionary
 class Imagen:
-    def __init__(self, imageName, imageData, imageSize, imageId, attackName='', epsilon='', isAdvNatural=False):
+    def __init__(self, imageName, imageData, imageSize, imageId, networkName, attackName='', epsilon='', isAdvNatural=False):
         self.name = imageName
         self.data = imageData
         self.heatmap = 0
@@ -12,6 +12,7 @@ class Imagen:
         self.attackName = attackName #Indica el metodo de ataque con el cual se ha generado la imagen
         self.epsilon = epsilon #Indica el epsilon del metodo de ataque con el cual se ha generado la imagen
         self.advNatural = isAdvNatural #Indica si es un adversario natural
+        self.networkModelName = networkName #Indica el nombre de la red neuronal con el que se hizo la prediccion de los datos
 
     def addPrediction(self, predID):
         self.predictionId = predID
@@ -25,7 +26,7 @@ class Imagen:
         self.epsilon = epsilon
 
     def copyImage(self):
-        img = Imagen(self.name, self.data, self.size, self.id)
+        img = Imagen(self.name, self.data, self.size, self.id, self.networkModelName)
         return img
 
     def addHeatmap(self, heatmapData):
@@ -33,3 +34,6 @@ class Imagen:
 
     def addAdvNatural(self, isAdvNatural):
         self.advNatural = isAdvNatural
+
+    def addNetworkModelName(self, networkName):
+        self.networkModelName = networkName

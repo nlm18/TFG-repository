@@ -12,9 +12,11 @@ import random
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+from keras.layers import Input
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump
-from keras.applications.efficientnet import decode_predictions
+from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientnet0
+from keras.applications.xception import Xception, preprocess_input as preprocess_xception, decode_predictions as decode_xception
 # ------------------------ Funciones auxiliares ---------------------------------
 def generateRandomVector(n, total_img):
     A = []
@@ -37,8 +39,10 @@ def searchImageInDirectory(num, path, img_per_directory):
     list_img = os.listdir(path)
     img_name = list_img[index]
     return img_name
-def loadImages(path, index_vector, size=(224,224), createImages=True, unclassified_images=False, realID =''):
-    X_test = np.ndarray(shape=(len(index_vector), 224, 224, 3), dtype='float32')
+def loadImages(path, index_vector, size=(224,224), createImages=True, unclassified_images=False, realID ='', networkName = 'EfficientNet0'):
+    arrayShape = (len(index_vector), size[0], size[1], 3)
+    X_withoutPreprocess = np.ndarray(shape=arrayShape, dtype='float32')
+    X_test = np.ndarray(shape=arrayShape, dtype='float32')
     img_test = []
     if createImages == True :
         img_path = ""
@@ -55,10 +59,10 @@ def loadImages(path, index_vector, size=(224,224), createImages=True, unclassifi
                 ID = dir_name
             img_path += file_name
             # Preprocess data
-            X_test[index] = gradCamInterface.get_img_array_path(img_path, size)
-            imagen = Imagen(file_name, X_test[index], size, ID, '')
+            X_withoutPreprocess[index] = gradCamInterface.get_img_array_path(img_path, size)
+            imagen = Imagen(file_name, X_withoutPreprocess[index], size, ID, networkName)
             img_test.append(imagen)
-            # preprocess_input(gradCamInterface.get_img_array_path(img_path[index], size))
+            X_test[index] = preprocess_input(networkName, X_withoutPreprocess[index])
     else :
         img_test = loadVariable(path+"testImages_efficientnetB0_random%simages.pkl" % (len(index_vector)))
     return X_test, img_test
@@ -85,7 +89,7 @@ def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon, predict
 def isValidToCreateAdversarialExample(originalImage, classifier, isImagenet):
     img_array = gradCamInterface.get_img_array(originalImage.data)
     preds = classifier.model.predict(img_array)
-    p = decode_predictions(preds, top=1)
+    p = decode_predictions(originalImage.networkModelName, preds)
     originalImage.addPrediction(p[0][0][0])
     if p[0][0][0] != originalImage.id:
         if isImagenet == False:
@@ -98,14 +102,15 @@ def isAnAdversarialExample(originalImage, adv_img, classifier):
     isValid = False
     adv_array = gradCamInterface.get_img_array(adv_img)
     preds = classifier.predict(adv_array)
-    p = decode_predictions(preds, top=1)
+    p = decode_predictions(originalImage.networkModelName, preds)
     if p[0][0][0] != originalImage.id:
         isValid = True
     return isValid, p[0][0][0]
 
 def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False, isImagenet=True):
     # Para distintos valores de epsilon
-    img_array_test = np.ndarray(shape=(len(x_test), 224, 224, 3), dtype='float32')
+    arrayShape = (len(x_test), originalImages[0].size[0], originalImages[0].size[1], 3)
+    img_array_test = np.ndarray(shape=arrayShape, dtype='float32')
     img_adv = [] # Guarda todas las imagenes seguidas, para recorrerlo:
                  # num+NUM_IMG*(indiceAtaque)*len(epsilon)+NUM_IMG*(indiceEpsilon)
     if createImages == True :
@@ -144,7 +149,8 @@ def generateAdversarialImages(originalImages, x_test, attackName, epsilon, class
 
 def generateAnAdversarialImage(originalImage, x_test, attackName, classifier, isImagenet=True):
     # Para distintos valores de epsilon
-    img_array_test = np.ndarray(shape=(1, 224, 224, 3), dtype='float32')
+    arrayShape = (len(x_test), originalImage.size[0], originalImage.size[1], 3)
+    img_array_test = np.ndarray(shape=arrayShape, dtype='float32')
     epsilon = 2500
     # Si es un adversario natural o no acierta la imagen original de imagenet no hace falta que genere imagenes con ataques
     if isValidToCreateAdversarialExample(originalImage, classifier, isImagenet) == False:
@@ -171,6 +177,32 @@ def saveVariable(datos, filename):
 def loadVariable(filename):
      with open(filename, "rb") as f:
          return pickle.load(f)
+def getNetworkModel(NetworkModelName, IMG_SHAPE):
+#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
+    if NetworkModelName == 'EfficientNetB0':
+        return EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=IMG_SHAPE)
+    elif NetworkModelName == 'Xception':
+        return Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=IMG_SHAPE))
+
+def preprocess_input(NetworkModelName, img_array):
+#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
+    if NetworkModelName == 'EfficientNetB0':
+        return img_array
+    elif NetworkModelName == 'Xception':
+        return preprocess_xception(img_array)
+
+def decode_predictions(NetworkModelName, preds):
+#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
+    if NetworkModelName == 'EfficientNetB0':
+        return decode_efficientnet0(preds, top=1)
+    elif NetworkModelName == 'Xception':
+        return decode_xception(preds, top=1)
+
+def getLastConvLayerName(NetworkModelName):
+    if NetworkModelName == 'EfficientNetB0':
+        return "top_activation"
+    elif NetworkModelName == 'Xception':
+        return "block14_sepconv2_act"
 
 def getAttackMethod(name, classifier, epsilon):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']

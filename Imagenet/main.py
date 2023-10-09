@@ -7,7 +7,6 @@ import os
 import errno
 import tensorflow as tf
 from tensorflow import keras
-from keras.applications.efficientnet import preprocess_input, decode_predictions
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.estimators.classification import TensorFlowV2Classifier
 
@@ -19,58 +18,8 @@ def train_step(model, images, labels):
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-def executeGradCam(num, classifier, epsilon, n_iter):
-    # https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
-    # Prepare image
-    list_img = []
-    list_img.append(img_test[num])
-    for j in range(0, len(epsilon)):
-        list_img.append(img_adv[num+NUM_IMG*n_iter*len(epsilon)+NUM_IMG*j])#Guarda todas las imagenes seguidas
-    img_array = []
-    predicted = []
-    heatmap = []
-    gradCam_img = []
-    plot_img = []
-    # Para la lista de imagenes que tendra la forma: [imagOriginal, adv_eps1, adv_eps2...]
-    for ind in range(0, len(list_img)): #ind == 0 es la imagen sin modificar
-        img_array.append(gradCamInterface.get_img_array(list_img[ind].data))
-        if list_img[ind].predictionId =='':
-            preds = classifier.predict(img_array[ind])
-            p = decode_predictions(preds, top=1) #El resultado es del tipo [[('n03814906', 'necklace', 9.88)]]
-            predicted.append(p[0][0])
-            list_img[ind].addPrediction(p[0][0][0])
-
-        # Generate class activation heatmap
-        heatmap.append(gradCamInterface.make_gradcam_heatmap(img_array[ind], model, last_conv_layer_name))
-        list_img[ind].addHeatmap(heatmap[ind])
-
-        # Display heatmap
-        #Ya esta entre 0-255 img_255.append(list_img[ind] * 255)
-        gradCam_img.append(gradCamInterface.display_gradcam(list_img[ind].data, heatmap[ind]))
-
-        if ind == 0:
-            print("Real value: ", list_img[ind].idName)
-            if list_img[ind].advNatural:
-                print("Predicted benign example: ", list_img[ind].predictionName, " NATURAL ADVERSARIAL EXAMPLE")
-            else:
-                print("Predicted benign example: ", list_img[ind].predictionName)
-        else:
-            if list_img[0].advNatural == False:
-                print("AttackMethod: %s with epsilon = %s" % (ATTACK_NAME[atck], epsilon[ind-1]))
-                print("Predicted adversarial example: ", list_img[ind].predictionName)
-
-        plot_img.append(keras.preprocessing.image.array_to_img(list_img[ind].data))
-        plot_img.append(gradCam_img[ind])
-
-    #Se actualiza los valores de prediccion y heatmap de las imagenes:
-    img_test[num].addPrediction(list_img[0].predictionId)
-    img_test[num].addHeatmap(list_img[0].heatmap)
-    for j in range(0, len(epsilon)):
-        index = num + NUM_IMG*n_iter*len(epsilon) + NUM_IMG*j
-        img_adv[index].addPrediction(list_img[j+1].predictionId)
-        img_adv[index].addHeatmap(list_img[j+1].heatmap)
-    print("     ------------------")
-    return plot_img, list_img
+# DEPRECATED: executeGradCam(num, classifier, epsilon, n_iter):
+# https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
 
 def executeGradCam(orig, adv) :
     # Prepare image
@@ -79,6 +28,7 @@ def executeGradCam(orig, adv) :
     list_img.append(adv)
     plot_img = []
 
+    last_conv_layer_name = aux.getLastConvLayerName(NetworkModelName)
     # Generate class activation heatmap
     for ind in range(0, len(list_img)):
         img_array = gradCamInterface.get_img_array(list_img[ind].data)
@@ -100,23 +50,25 @@ def executeGradCam(orig, adv) :
 
 # ------------------------ Constantes ---------------------------------------
 NUM_CLASSES = 1000 #imagenet=1000
-IMG_SIZE = (224, 224)
-IMG_SHAPE = (224, 224, 3)
+#EFFICIENTNETB0 IMG_SIZE = (224, 224)#IMG_SHAPE = (224, 224, 3)
+IMG_SIZE = (299, 299)
+IMG_SHAPE = (299, 299, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 1#399 #Cantidad de imagenes de test
-TOTAL_IMG = 1399 #Cantidad de imagenes de las que se disponen, imagenet=50000
-IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/water_bottle_efficientNetB0/frames_raw/"
+NUM_IMG = 1000 #Cantidad de imagenes de test
+TOTAL_IMG = 1000 #Cantidad de imagenes de las que se disponen, imagenet=50000
+IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/waterBottle_xception/frames_raw/"
 #EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
-EXECUTION_ID = "WebcamData_ValidAdversarial"
+EXECUTION_ID = "WebcamData_Xception"
 #IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/movil/"#cambiar parametros de entrada de loadImages segun si son de imagenet o no
 realID='n04557648'
 
 #EPSILON = [20000, 30000]
 ATTACK_NAME = ['FastGradientMethod']
+NetworkModelName = 'Xception'
 
 # ------------------------ Código principal ---------------------------------
 # Load model: CNN -> EfficientNetB0
-model = tf.keras.applications.EfficientNetB0(weights="imagenet", include_top=True, classes=NUM_CLASSES, input_shape=IMG_SHAPE)
+model = aux.getNetworkModel(NetworkModelName, IMG_SHAPE)
 model.trainable = False
 optimizer = tf.keras.optimizers.Adam(learning_rate=LR)
 loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
@@ -124,7 +76,7 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=
 
 #Load Images
 randomVector = aux.generateRandomVector(NUM_IMG, TOTAL_IMG)
-x_test, img_test = aux.loadImages(IMG_PATH, randomVector, unclassified_images=True, realID=realID)# Quitar 2 ultimos parametros para imagenet
+x_test, img_test = aux.loadImages(IMG_PATH, randomVector, size= IMG_SIZE, unclassified_images=True, realID=realID, networkName='Xception')# Quitar unclassified_images y realID para imagenet
 #Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
 #Si unclassified_images = True: cargará las imagenes que no son de imagenet y por tanto no estan dentro de una carpeta con el valor de su ID
 
@@ -142,9 +94,9 @@ for atck in range(0, len(ATTACK_NAME)) :
 
 #GRAD CAM
 # Remove last layer's softmax
-model.layers[-1].activation = None
+model.layers[-1].activation = None #efficientnetb0
 #print(model.summary())
-last_conv_layer_name = "top_activation"
+
 for atck in range(0, len(ATTACK_NAME)):
     for num in range(0, NUM_IMG):
         img_figure, list_img_data = executeGradCam(img_test[num], img_adv[num])
