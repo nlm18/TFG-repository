@@ -18,6 +18,7 @@ import gradCamInterface
 
 NETWORK_NAME = "xception"
 OBJECT = "waterBottle_xception"
+realID='n04557648'
 
 import os
 import keras
@@ -77,6 +78,7 @@ def example():
 
 def classifyImage(frame,network,network_name):
     frameLabeled=np.copy(frame)
+    advNatural = False
     if network_name == "vgg16" or network_name == "EfficientNetB0" :
         img_shape = (224,224)
     else:
@@ -112,9 +114,11 @@ def classifyImage(frame,network,network_name):
     (imagenetID, label, prob) = P[0][0]
     #gradCam = executeGradCam(image, network, last_conv_layer_name)
     #frame_resized = cv2.resize(gradCam, (640,480))
+    if imagenetID != realID:
+        advNatural=True
     cv2.putText(frameLabeled, "Label: {}, {:.2f}%".format(label, prob * 100),#poner frameLabeled si no se quiere mostrar el gradcam
                 (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-    return frameLabeled
+    return frameLabeled, advNatural
 
 def webcamShow():
 
@@ -133,19 +137,21 @@ def webcamShow():
         #cv2.imshow("webcam", frame)
         # Classify and show the image
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frameDetection=classifyImage(frame_rgb,model,NETWORK_NAME)
+        frameDetection,x=classifyImage(frame_rgb,model,NETWORK_NAME)
         frame_bgr = cv2.cvtColor(frameDetection, cv2.COLOR_RGB2BGR)
         cv2.imshow("webcam", frame_bgr)
         # When a key is pressed, start recording
         if cv2.waitKey(50) >= 0:#Enter
             break
-
+    num_AdvNaturales = 0
     for i in range(N_FRAMES):
         # Capture the frame
         next, frame = vc.read()
         # cv2.imshow("webcam", frame)
         # Classify and show the image
-        frameDetection = classifyImage(frame, model, NETWORK_NAME)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frameDetection, advNatural = classifyImage(frame_rgb, model, NETWORK_NAME)
+        frame_bgr = cv2.cvtColor(frameDetection, cv2.COLOR_RGB2BGR)
         #cv2.imshow("webcam", frameDetection)
         # Crea los directorios
         createDirs(OBJECT)
@@ -154,11 +160,14 @@ def webcamShow():
         num = len(list)
         path="ImageNetWebcam/%s/frames_%s/imageFrame_%s.png"
         cv2.imwrite(path % (OBJECT, "raw", num), frame)
-        cv2.imwrite(path % (OBJECT, "detected", num), frameDetection)
+        cv2.imwrite(path % (OBJECT, "detected", num), frame_bgr)
         num+=1
+        if advNatural:
+            num_AdvNaturales += 1
 
     vc.release()
     cv2.destroyAllWindows()
+    print("- Percentage of natural adversarial images: {}%".format(num_AdvNaturales / N_FRAMES * 100))
 
 def networksTest():
 
