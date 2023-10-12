@@ -29,6 +29,7 @@ def get_img_array(img_array):
     return array
 def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
     tf.config.run_functions_eagerly(True)
+    tf.data.experimental.enable_debug_mode()
     # First, we create a model that maps the input image to the activations
     # of the last conv layer as well as the output predictions
     grad_model = tf.keras.models.Model(
