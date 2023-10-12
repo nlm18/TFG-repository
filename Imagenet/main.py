@@ -38,8 +38,7 @@ def executeGradCam(orig, adv) :
         # Display heatmap. Ya esta entre 0-255
         gradCam_img = gradCamInterface.display_gradcam(list_img[ind].data, heatmap)
 
-        img_rgb = list_img[ind].data[:, :, [2, 1, 0]]  # RGB
-        plot_img.append(keras.preprocessing.image.array_to_img(img_rgb))
+        plot_img.append(keras.preprocessing.image.array_to_img(list_img[ind].data))
         plot_img.append(gradCam_img)
 
     orig.addHeatmap(list_img[0].heatmap)
@@ -54,7 +53,7 @@ NUM_CLASSES = 1000 #imagenet=1000
 IMG_SIZE = (299, 299)
 IMG_SHAPE = (299, 299, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 1000 #Cantidad de imagenes de test
+NUM_IMG = 50 #Cantidad de imagenes de test
 TOTAL_IMG = 1000 #Cantidad de imagenes de las que se disponen, imagenet=50000
 IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/waterBottle_xception/frames_raw/"
 #EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
