@@ -40,10 +40,11 @@ def sortListOfImages(areMultipleAttacks, num):
     return sorted_list
 
 # ------------------------ Constantes ---------------------------------------
-DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variables/"
-DATA_ID = "WebcamData_ValidAdversarial"
+DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_WebcamData_InceptionV3/NaturalAdversarial/"
+DATA_ID = ""
 NUM_ATCKS = 1 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
 NUM_EPS = 1  #Numero de epsilon distintos que se usaron cuando se guardaron las imagenes
+oneByOne = True
 
 img_orig, img_adv = aux.loadImagesByID(DATA_PATH, DATA_ID)
 NUM_IMG = len(img_orig)
@@ -57,10 +58,13 @@ if calculate_metrics == True:
     metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Media", "Media/255*100 (%)", "Varianza", "Desviación Típica", "Norma Mascara", "Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
 
+if oneByOne:
+    sorted_list = img_orig+img_adv
+    NUM_IMG = 1
 for num in range(0, NUM_IMG):
     list_img_to_plot = []
-    sorted_list = sortListOfImages(False, num)
-
+    if oneByOne == False:
+        sorted_list = sortListOfImages(False, num)
     if execute_gray_gradcam == True:
         if aux.isValidExample_sortedList(sorted_list) :# Si la red no ha acertado en la predicción de la imagen original, no se guarda la imagen
             for ind in range(0, len(sorted_list)):
@@ -70,7 +74,7 @@ for num in range(0, NUM_IMG):
 
     if calculate_metrics == True:
         for ind in range(0, len(sorted_list)) :
-            if sorted_list[0].advNatural and (ind != 0): #Si es adversaria natural, la artifical solo son ceros.
+            if sorted_list[0].advNatural and (ind != 0) and oneByOne == False: #Si es adversaria natural, la artifical solo son ceros.
                 break
             metricsValue = []
             metricsValue = writeDataImageInCSV(metricsValue, sorted_list[ind])
@@ -84,7 +88,7 @@ for num in range(0, NUM_IMG):
             metricsValue.append(round(gray_heatmap.mean()/255*100, 2))
             metricsValue.append(round(gray_heatmap.var(), 2))
             metricsValue.append(round(gray_heatmap.std(), 2))
-            if metricsValue[1] != "Original": #Si no es la imagen original
+            if metricsValue[1] != "Original" and metricsValue[1] != "Adv. Natural": #Si no es la imagen original
                 # La norma es la distancia euclidea
                 metricsValue.append(round(np.linalg.norm(gray_heatmap - gray_heatmap_orig), 2))
                 metricsValue.append(round(np.linalg.norm(sorted_list[ind].data - sorted_list[0].data),2))

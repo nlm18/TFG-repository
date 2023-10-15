@@ -53,17 +53,17 @@ NUM_CLASSES = 1000 #imagenet=1000
 IMG_SIZE = (299, 299)
 IMG_SHAPE = (299, 299, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 1000 #Cantidad de imagenes de test
-TOTAL_IMG = 1000 #Cantidad de imagenes de las que se disponen, imagenet=50000
-IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/waterBottle_xception/frames_raw/"
+NUM_IMG = 500 #Cantidad de imagenes de test
+TOTAL_IMG = 3587 #Cantidad de imagenes de las que se disponen, imagenet=50000
+IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/waterBottle_inceptionv3_5000/frames_raw/"
 #EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
-EXECUTION_ID = "WebcamData_Xception"
+EXECUTION_ID = "WebcamData_InceptionV3"
 #IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/movil/"#cambiar parametros de entrada de loadImages segun si son de imagenet o no
 realID='n04557648'
 
 #EPSILON = [20000, 30000]
 ATTACK_NAME = 'FastGradientMethod'
-NetworkModelName = 'Xception'
+NetworkModelName = 'InceptionV3'
 
 # ------------------------ Código principal ---------------------------------
 # Load model: CNN -> EfficientNetB0
@@ -73,6 +73,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=LR)
 loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
 classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 1), nb_classes=NUM_CLASSES, input_shape=IMG_SHAPE, loss_object=loss_object, train_step=train_step)
 
+aux.createDirs(EXECUTION_ID, onebyone=True)
 num_AdvNaturales = 0
 startIndex = 0
 #Load Images
@@ -100,15 +101,11 @@ for num_img in range(startIndex, NUM_IMG) :
     img_id = img_test[0].name
     img_id = img_id.replace('.png', '')
     # Save variables
-    try :
-        os.mkdir('variablesIndividuales_%s'% (EXECUTION_ID))
-    except OSError as e :
-        if e.errno != errno.EEXIST :
-            raise
-    aux.saveVariable(img_test[0], "variablesIndividuales_%s/%s_testImage.pkl" % (EXECUTION_ID, img_id))
     if img_test[0].advNatural == False:
-        aux.saveVariable(img_adv[0], "variablesIndividuales_%s/%s_adversarialImage_atck_%s" % (EXECUTION_ID, img_id, ATTACK_NAME) + ".pkl")
+        aux.saveVariable(img_test[0], "variablesIndividuales_%s/ArtificialAdversarial/%s_testImage.pkl" % (EXECUTION_ID, img_id))
+        aux.saveVariable(img_adv[0], "variablesIndividuales_%s/ArtificialAdversarial/%s_adversarialImage_atck_%s" % (EXECUTION_ID, img_id, ATTACK_NAME) + ".pkl")
     else:
+        aux.saveVariable(img_test[0], "variablesIndividuales_%s/NaturalAdversarial/%s_testImage.pkl" % (EXECUTION_ID, img_id))
         num_AdvNaturales += 1
     #Borramos variables
     img_test.pop()

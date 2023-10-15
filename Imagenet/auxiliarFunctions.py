@@ -19,6 +19,7 @@ from keras.layers import Input
 from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump
 from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientnet0
 from keras.applications.xception import Xception, preprocess_input as preprocess_xception, decode_predictions as decode_xception
+from keras.applications.inception_v3 import InceptionV3, preprocess_input as preprocess_inceptionv3, decode_predictions as decode_inceptionv3
 matplotlib.use('Agg')#para no abrir las figuras, si quiero abrirlas seria con TkAgg
 #The default backend for Matplotlib is the “TkAgg” backend, which is a cross-platform graphical user interface (GUI) toolkit. However, there are other backends available that may be better suited to your needs, such as the “Agg” backend for non-interactive plotting
 # ------------------------ Funciones auxiliares ---------------------------------
@@ -96,12 +97,19 @@ def loadImages(path, index_vector, size=(224,224), createImages=True, unclassifi
 
 def loadImagesByID(data_path, data_ID):
     list_files_names = os.listdir(data_path)
-    img_adv_name = [x for x in list_files_names if data_ID+"_Adv" in x]
+    img_adv_name = [x for x in list_files_names if data_ID+"_adv" in x]
     img_orig_name = [x for x in list_files_names if data_ID+"_test" in x]
 
-    img_adv = loadVariable(data_path+img_adv_name[0])
-    img_orig = loadVariable(data_path+img_orig_name[0])
-    return img_orig, img_adv
+    img_adv = []
+    img_orig = []
+    for i in range(0, len(img_adv_name)):
+        img_adv.append(loadVariable(data_path+img_adv_name[i]))
+    for i in range(0, len(img_orig_name)):
+        img_orig.append(loadVariable(data_path+img_orig_name[i]))
+    if i > 2:
+        return img_orig, img_adv
+    else:
+        return img_orig[0], img_adv[0]
 
 def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon, predictionID=0):
     imagen = original.copyImage()
@@ -214,13 +222,16 @@ def getNetworkModel(NetworkModelName, IMG_SHAPE):
         return EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=IMG_SHAPE)
     elif NetworkModelName == 'Xception':
         return Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=IMG_SHAPE))
+    elif NetworkModelName == 'InceptionV3':
+        return InceptionV3(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
 
 def preprocess_input(NetworkModelName, img_array):
-#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
     if NetworkModelName == 'EfficientNetB0':
         return img_array
     elif NetworkModelName == 'Xception':
         return preprocess_xception(img_array)
+    elif NetworkModelName == 'InceptionV3':
+        return preprocess_inceptionv3(img_array)
 
 def decode_predictions(NetworkModelName, preds):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
@@ -228,12 +239,16 @@ def decode_predictions(NetworkModelName, preds):
         return decode_efficientnet0(preds, top=1)
     elif NetworkModelName == 'Xception':
         return decode_xception(preds, top=1)
+    elif NetworkModelName == 'InceptionV3':
+        return decode_inceptionv3(preds, top=1)
 
 def getLastConvLayerName(NetworkModelName):
     if NetworkModelName == 'EfficientNetB0':
         return "top_conv" #top_activation
     elif NetworkModelName == 'Xception':
         return "conv2d_3" #"block14_sepconv2_act"
+    elif NetworkModelName == 'InceptionV3':
+        return "activation_93"
 
 def getAttackMethod(name, classifier, epsilon):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
@@ -288,21 +303,13 @@ def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
 
 def saveResults(list_of_images, imagen_data, exec_ID='', type=''):
     fig = createFigure(list_of_images, imagen_data, resultColumn='GradCam ')
-    try :
-        os.mkdir('gradCam_examples_%s' % (exec_ID))
-    except OSError as e :
-        if e.errno != errno.EEXIST :
-            raise
-    try :
-        os.mkdir('gradCam_examples_%s/NaturalAdversarial%s' % (exec_ID, type) )
-        os.mkdir('gradCam_examples_%s/ArtificialAdversarial%s' % (exec_ID, type) )
-    except OSError as e :
-        if e.errno != errno.EEXIST :
-            raise
+
+    img_id = imagen_data[0].name
+    img_id = img_id.replace('.png', '')
     if imagen_data[0].advNatural:
-        file_name = 'gradCam_examples_%s/NaturalAdversarial%s/gradCam_example_image-%s.jpg' % ( exec_ID, type, imagen_data[1].name)
+        file_name = 'gradCam_examples_%s/NaturalAdversarial%s/gradCam_example_%s.jpg' % ( exec_ID, type, img_id)
     else:
-        file_name = 'gradCam_examples_%s/ArtificialAdversarial%s/gradCam_example_image-%s_attack_method-%s.jpg' % ( exec_ID, type, imagen_data[1].name, imagen_data[1].attackName)
+        file_name = 'gradCam_examples_%s/ArtificialAdversarial%s/gradCam_example_%s_attack_method-%s.jpg' % ( exec_ID, type, img_id, imagen_data[1].attackName)
 
     fig.savefig(file_name)
     plt.close()
@@ -478,3 +485,36 @@ def printResultsPerImage(orig, adv):
     if orig.advNatural == False :
         print("AttackMethod: %s with epsilon = %s" % (adv.attackName, adv.epsilon))
         print("Predicted adversarial example: ", adv.predictionName)
+
+def createDirs(exec_ID, type='', onebyone=False):
+    try :
+        os.mkdir('gradCam_examples_%s' % (exec_ID))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    try :
+        os.mkdir('gradCam_examples_%s/NaturalAdversarial%s' % (exec_ID, type) )
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    try :
+        os.mkdir('gradCam_examples_%s/ArtificialAdversarial%s' % (exec_ID, type) )
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    if onebyone:
+        try :
+            os.makedirs('variablesIndividuales_%s' % (exec_ID))
+        except OSError as e :
+            if e.errno != errno.EEXIST :
+                raise
+        try :
+            os.mkdir('variablesIndividuales_%s/NaturalAdversarial' % (exec_ID) )
+        except OSError as e :
+            if e.errno != errno.EEXIST :
+                raise
+        try :
+            os.mkdir('variablesIndividuales_%s/ArtificialAdversarial' % (exec_ID) )
+        except OSError as e :
+            if e.errno != errno.EEXIST :
+                raise

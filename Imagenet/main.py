@@ -110,5 +110,5 @@ except OSError as e :
     if e.errno != errno.EEXIST :
         raise
 aux.saveVariable(img_test, "variables/%s_testImages_efficientnetB0_random%simages.pkl" % (EXECUTION_ID, NUM_IMG))
-aux.saveVariable(img_adv, "variables/%s_Adversarials_images_atcks_%s" % (EXECUTION_ID, ATTACK_NAME) + ".pkl")
+aux.saveVariable(img_adv, "variables/%s_adversarials_images_atcks_%s" % (EXECUTION_ID, ATTACK_NAME) + ".pkl")
 #https://stackoverflow.com/questions/66182884/how-to-implement-grad-cam-on-a-trained-network
