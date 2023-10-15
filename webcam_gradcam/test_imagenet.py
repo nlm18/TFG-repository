@@ -16,8 +16,8 @@ import cv2
 import errno
 import gradCamInterface
 
-NETWORK_NAME = "xception"
-OBJECT = "waterBottle_xception"
+NETWORK_NAME = "inceptionv3"#"xception"
+OBJECT = "waterBottle_inceptionv3_5000"
 realID='n04557648'
 
 import os
@@ -124,12 +124,13 @@ def webcamShow():
 
     print("[INFO] loading network...")
     #model = EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
-    model = Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    #model = Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    model = InceptionV3(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
 
     cv2.namedWindow("webcam")
     vc = cv2.VideoCapture(0)
 
-    N_FRAMES = 1000
+    N_FRAMES = 5000
 
     while True:
         # Capture the frame
@@ -159,11 +160,15 @@ def webcamShow():
         list = os.listdir("ImageNetWebcam/%s/frames_%s/" % (OBJECT, "raw"))
         num = len(list)
         path="ImageNetWebcam/%s/frames_%s/imageFrame_%s.png"
-        cv2.imwrite(path % (OBJECT, "raw", num), frame)
-        cv2.imwrite(path % (OBJECT, "detected", num), frame_bgr)
         num+=1
         if advNatural:
             num_AdvNaturales += 1
+            cv2.imwrite(path % (OBJECT, "naturalAdvDetected", num), frame_bgr)
+            cv2.imwrite(path % (OBJECT, "naturalAdv", num), frame)
+        else:
+            cv2.imwrite(path % (OBJECT, "detected", num), frame_bgr)
+            cv2.imwrite(path % (OBJECT, "raw", num), frame)
+
 
     vc.release()
     cv2.destroyAllWindows()
@@ -203,6 +208,16 @@ def createDirs(OBJECT):
             raise
     try :
         os.makedirs('ImageNetWebcam/%s/frames_detected' % (OBJECT))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    try :
+        os.makedirs('ImageNetWebcam/%s/frames_naturalAdvDetected' % (OBJECT))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    try :
+        os.makedirs('ImageNetWebcam/%s/frames_naturalAdv' % (OBJECT))
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
