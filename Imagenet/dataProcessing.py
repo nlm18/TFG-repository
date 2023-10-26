@@ -40,14 +40,18 @@ def sortListOfImages(areMultipleAttacks, num):
     return sorted_list
 
 # ------------------------ Constantes ---------------------------------------
-DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_WebcamData_InceptionV3/NaturalAdversarial/"
+DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_WebcamData_luzTest_InceptionResNetV2/"
 DATA_ID = ""
 NUM_ATCKS = 1 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
 NUM_EPS = 1  #Numero de epsilon distintos que se usaron cuando se guardaron las imagenes
 oneByOne = True
 
-img_orig, img_adv = aux.loadImagesByID(DATA_PATH, DATA_ID)
-NUM_IMG = len(img_orig)
+if oneByOne:
+    sorted_data = aux.loadImageOneByOne(DATA_PATH, createData=True)
+    NUM_IMG = len(sorted_data)
+else:
+    img_orig, img_adv = aux.loadImagesByID(DATA_PATH, DATA_ID)
+    NUM_IMG = len(img_orig)
 
 # ------------------------ Operaciones --------------------------------------
 execute_gray_gradcam=False #tarda
@@ -55,7 +59,7 @@ calculate_metrics=True #tarda 'poco'
 execute_Histogram=False #tarda mucho
 
 if calculate_metrics == True:
-    metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Media", "Media/255*100 (%)", "Varianza", "Desviación Típica", "Norma Mascara", "Norma Imagen", "MSE", "PSNR", "SSIM"]
+    metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Media", "Media normalizada", "Varianza", "Desviación Típica", "Norma Mascara", "Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
 
 if oneByOne:
@@ -85,7 +89,7 @@ for num in range(0, NUM_IMG):
             gray_heatmap_orig = cv2.cvtColor(gray_heatmap_orig, cv2.COLOR_RGB2GRAY)
             list_img_to_plot.append(gray_heatmap)
             metricsValue.append(round(gray_heatmap.mean(), 2))
-            metricsValue.append(round(gray_heatmap.mean()/255*100, 2))
+            metricsValue.append(round(gray_heatmap.mean()/255, 2))
             metricsValue.append(round(gray_heatmap.var(), 2))
             metricsValue.append(round(gray_heatmap.std(), 2))
             if metricsValue[1] != "Original" and metricsValue[1] != "Adv. Natural": #Si no es la imagen original
