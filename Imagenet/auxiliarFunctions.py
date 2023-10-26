@@ -20,6 +20,10 @@ from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, Projec
 from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientnet0
 from keras.applications.xception import Xception, preprocess_input as preprocess_xception, decode_predictions as decode_xception
 from keras.applications.inception_v3 import InceptionV3, preprocess_input as preprocess_inceptionv3, decode_predictions as decode_inceptionv3
+from keras.applications.inception_resnet_v2 import InceptionResNetV2, preprocess_input as preprocess_inceptionresnetv2, decode_predictions as decode_inceptionresnetv2
+from keras.applications.vgg16 import VGG16, preprocess_input as preprocess_vgg16, decode_predictions as decode_vgg16
+from keras.applications.mobilenet import MobileNet, preprocess_input as preprocess_mobileNet, decode_predictions as decode_mobileNet
+
 matplotlib.use('Agg')#para no abrir las figuras, si quiero abrirlas seria con TkAgg
 #The default backend for Matplotlib is the “TkAgg” backend, which is a cross-platform graphical user interface (GUI) toolkit. However, there are other backends available that may be better suited to your needs, such as the “Agg” backend for non-interactive plotting
 # ------------------------ Funciones auxiliares ---------------------------------
@@ -111,6 +115,16 @@ def loadImagesByID(data_path, data_ID):
     else:
         return img_orig[0], img_adv[0]
 
+def loadImageOneByOne(data_path):
+    list_artAdv_directory = os.listdir(data_path)
+#Lo mejor sera meterlo junto en una carpeta y que lo coja ya ordenado por nombre
+    sorted_data = []
+    name_list = []
+    for i in range(0, len(list_artAdv_directory)):
+        sorted_data.append(loadVariable(data_path+list_artAdv_directory[i]))
+        name_list.append(sorted_data[i].name)
+
+    return sorted_data, name_list
 def createAdvImagenFromOriginal(original, adv_data, attackName, epsilon, predictionID=0):
     imagen = original.copyImage()
     if original.advNatural:
@@ -216,39 +230,63 @@ def saveVariable(datos, filename):
 def loadVariable(filename):
      with open(filename, "rb") as f:
          return pickle.load(f)
-def getNetworkModel(NetworkModelName, IMG_SHAPE):
+def getNetworkModel(NetworkModelName):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
-    if NetworkModelName == 'EfficientNetB0':
-        return EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=IMG_SHAPE)
-    elif NetworkModelName == 'Xception':
-        return Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=IMG_SHAPE))
-    elif NetworkModelName == 'InceptionV3':
+    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
+        return EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
+    elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
+        return Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    elif NetworkModelName == 'InceptionV3' or NetworkModelName == 'inceptionv3':
         return InceptionV3(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    elif NetworkModelName == 'InceptionResNetV2' or NetworkModelName == 'inceptionresnetv2':
+        return InceptionResNetV2(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    elif NetworkModelName == 'VGG16' or NetworkModelName == 'vgg16':
+        return VGG16(include_top=True, weights="imagenet", input_tensor=Input(shape=(224, 224, 3)))
+    elif NetworkModelName == 'MobileNet' or NetworkModelName == 'mobileNet':
+        return MobileNet(include_top=True, weights="imagenet", input_tensor=Input(shape=(224, 224, 3)))
 
 def preprocess_input(NetworkModelName, img_array):
-    if NetworkModelName == 'EfficientNetB0':
+    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
         return img_array
-    elif NetworkModelName == 'Xception':
+    elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
         return preprocess_xception(img_array)
-    elif NetworkModelName == 'InceptionV3':
+    elif NetworkModelName == 'InceptionV3' or NetworkModelName == 'inceptionv3':
         return preprocess_inceptionv3(img_array)
+    elif NetworkModelName == 'InceptionResNetV2' or NetworkModelName == 'inceptionresnetv2' :
+        return preprocess_inceptionresnetv2(img_array)
+    elif NetworkModelName == 'VGG16' or NetworkModelName == 'vgg16' :
+        return preprocess_vgg16(img_array)
+    elif NetworkModelName == 'MobileNet' or NetworkModelName == 'mobileNet' :
+        return preprocess_mobileNet(img_array)
 
 def decode_predictions(NetworkModelName, preds):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
-    if NetworkModelName == 'EfficientNetB0':
+    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
         return decode_efficientnet0(preds, top=1)
-    elif NetworkModelName == 'Xception':
+    elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
         return decode_xception(preds, top=1)
-    elif NetworkModelName == 'InceptionV3':
+    elif NetworkModelName == 'InceptionV3' or NetworkModelName == 'inceptionv3':
         return decode_inceptionv3(preds, top=1)
+    elif NetworkModelName == 'InceptionResNetV2' or NetworkModelName == 'inceptionresnetv2':
+        return decode_inceptionresnetv2(preds, top=1)
+    elif NetworkModelName == 'VGG16' or NetworkModelName == 'vgg16':
+        return decode_vgg16(preds, top=1)
+    elif NetworkModelName == 'MobileNet' or NetworkModelName == 'mobileNet':
+        return decode_mobileNet(preds, top=1)
 
 def getLastConvLayerName(NetworkModelName):
-    if NetworkModelName == 'EfficientNetB0':
-        return "top_conv" #top_activation
-    elif NetworkModelName == 'Xception':
-        return "conv2d_3" #"block14_sepconv2_act"
-    elif NetworkModelName == 'InceptionV3':
-        return "activation_93"
+    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
+        return "top_activation" #top_activation param:0 / top_conv param:409600
+    elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
+        return "block14_sepconv2_act" #"block14_sepconv2_act"param 0 / conv2d_3
+    elif NetworkModelName == 'InceptionV3' or NetworkModelName == 'inceptionv3':
+        return "activation_93" #activation_93 param0/ conv2d_304 param:393216
+    elif NetworkModelName == 'InceptionResNetV2' or NetworkModelName == 'inceptionresnetv2' :
+        return "conv_7b_ac" #param 0 / conv_7b param: 3194880
+    elif NetworkModelName == 'VGG16' or NetworkModelName == 'vgg16' :
+        return "block5_conv3" #no tiene activacion, parametros 2359808, el que tiene param 0 es block5_pool
+    elif NetworkModelName == 'MobileNet' or NetworkModelName == 'mobileNet' :
+        return "conv_pw_13" #conv_pw_13_relu param:0/ conv_pw_13 param: 1048576
 
 def getAttackMethod(name, classifier, epsilon):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
@@ -266,9 +304,11 @@ def getAttackMethod(name, classifier, epsilon):
 def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
     if imagen_data[0].advNatural:
         num_rows = 1
+        fig_size= (8, 5)
     else:
         num_rows = len(imagen_data)
-    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=(15, 15), subplot_kw={'xticks':[], 'yticks':[]},
+        fig_size= (15, 15)
+    fig, axs = plt.subplots(nrows=num_rows, ncols=2, figsize=fig_size, subplot_kw={'xticks':[], 'yticks':[]},
                             layout='compressed')
     ind = 0;
     ind_pred = 0;
