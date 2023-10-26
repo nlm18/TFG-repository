@@ -1,23 +1,20 @@
 from keras.preprocessing import image as image_utils
 from keras.applications.imagenet_utils import decode_predictions
 from keras.applications.imagenet_utils import preprocess_input
-from keras.applications.vgg16 import VGG16, preprocess_input as preprocess_vgg16
-from keras.applications.xception import Xception, preprocess_input as preprocess_xception
-from keras.applications.inception_v3 import InceptionV3, preprocess_input as preprocess_inceptionv3
-from keras.applications.inception_resnet_v2 import InceptionResNetV2, preprocess_input as preprocess_inceptionresnetv2
-from keras.applications.vgg16 import decode_predictions as decode_vgg16
-from keras.applications.xception import decode_predictions as decode_xception
-from keras.applications.inception_v3 import decode_predictions as decode_inceptionv3
-from keras.applications.inception_resnet_v2 import decode_predictions as decode_inceptionresnetv2
+from keras.applications.vgg16 import VGG16, preprocess_input as preprocess_vgg16, decode_predictions as decode_vgg16
+from keras.applications.xception import Xception, preprocess_input as preprocess_xception, decode_predictions as decode_xception
+from keras.applications.inception_v3 import InceptionV3, preprocess_input as preprocess_inceptionv3, decode_predictions as decode_inceptionv3
+from keras.applications.inception_resnet_v2 import InceptionResNetV2, preprocess_input as preprocess_inceptionresnetv2, decode_predictions as decode_inceptionresnetv2
 from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientNetB0
-
+from keras.applications.mobilenet import MobileNet, preprocess_input as preprocess_mobileNet, decode_predictions as decode_mobileNet
+#https://keras.io/api/applications/
 import numpy as np
 import cv2
 import errno
 import gradCamInterface
 
-NETWORK_NAME = "inceptionv3"#"xception"
-OBJECT = "waterBottle_inceptionv3_5000"
+NETWORK_NAME = "InceptionV3"#"xception"
+OBJECT = "waterBottle_InceptionV3_5000name"
 realID='n04557648'
 
 import os
@@ -79,7 +76,7 @@ def example():
 def classifyImage(frame,network,network_name):
     frameLabeled=np.copy(frame)
     advNatural = False
-    if network_name == "vgg16" or network_name == "EfficientNetB0" :
+    if network_name == "vgg16" or network_name == "VGG16" or network_name == "EfficientNetB0" or network_name == "mobileNet" or network_name == "MobileNet":
         img_shape = (224,224)
     else:
         img_shape = (299,299)
@@ -87,30 +84,34 @@ def classifyImage(frame,network,network_name):
     #frame_resized = frame_resized.reshape(1,224,224,3)
     #image = image_utils.img_to_array(frame_resized)
     image = np.expand_dims(frame_resized, axis=0)
-    if network_name == "xception":
+    if network_name == "xception" or network_name == "Xception":
         image = preprocess_xception(image)
         preds = network.predict(image)#.reshape(1, 299, 299, 3))
         P = decode_xception(preds)
         last_conv_layer_name = "conv2d_3"
-    elif network_name == "inceptionv3":
+    elif network_name == "inceptionv3" or network_name == "InceptionV3":
         image = preprocess_inceptionv3(image)
         preds = network.predict(image)
         P = decode_inceptionv3(preds)
         last_conv_layer_name = "conv2d_97"
-    elif network_name == "inceptionresnetv2":
+    elif network_name == "inceptionresnetv2" or network_name == 'InceptionResNetV2':
         image = preprocess_inceptionresnetv2(image)
         preds = network.predict(image)
         P = decode_inceptionresnetv2(preds)
         last_conv_layer_name = "conv_7b"
-    elif network_name == "vgg16":
+    elif network_name == "vgg16" or network_name == 'VGG16':
         image = preprocess_vgg16(image)
         preds = network.predict(image)
         P = decode_vgg16(preds)
         last_conv_layer_name = "block5_conv3"
-    elif network_name == "EfficientNetB0":
+    elif network_name == "EfficientNetB0" or network_name == 'efficientNetB0':
         preds = network.predict(image)
         P = decode_efficientNetB0(preds)
         last_conv_layer_name = "top_activation"
+    elif network_name == "mobileNet" or network_name == "MobileNet":
+        image = preprocess_mobileNet(image)
+        preds = network.predict(image)
+        P = decode_mobileNet(preds)
     (imagenetID, label, prob) = P[0][0]
     #gradCam = executeGradCam(image, network, last_conv_layer_name)
     #frame_resized = cv2.resize(gradCam, (640,480))
@@ -119,13 +120,24 @@ def classifyImage(frame,network,network_name):
     cv2.putText(frameLabeled, "Label: {}, {:.2f}%".format(label, prob * 100),#poner frameLabeled si no se quiere mostrar el gradcam
                 (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
     return frameLabeled, advNatural
-
+def getNetworkModel(NetworkModelName):
+#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
+    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
+        return EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
+    elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
+        return Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    elif NetworkModelName == 'InceptionV3' or NetworkModelName == 'inceptionv3':
+        return InceptionV3(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    elif NetworkModelName == 'InceptionResNetV2' or NetworkModelName == 'inceptionresnetv2':
+        return InceptionResNetV2(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    elif NetworkModelName == 'VGG16' or NetworkModelName== 'vgg16':
+        return VGG16(include_top=True, weights="imagenet", input_tensor=Input(shape=(224, 224, 3)))
+    elif NetworkModelName == 'MobileNet' or NetworkModelName == 'mobileNet':
+        return MobileNet(include_top=True, weights="imagenet", input_tensor=Input(shape=(224, 224, 3)))
 def webcamShow():
 
     print("[INFO] loading network...")
-    #model = EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
-    #model = Xception(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
-    model = InceptionV3(include_top=True, weights="imagenet", input_tensor=Input(shape=(299, 299, 3)))
+    model = getNetworkModel(NETWORK_NAME)
 
     cv2.namedWindow("webcam")
     vc = cv2.VideoCapture(0)
@@ -145,6 +157,10 @@ def webcamShow():
         if cv2.waitKey(50) >= 0:#Enter
             break
     num_AdvNaturales = 0
+    # Crea los directorios
+    createDirs(OBJECT)
+    list = os.listdir("ImageNetWebcam/%s/frames_%s/" % (OBJECT, "raw"))
+    num = len(list)
     for i in range(N_FRAMES):
         # Capture the frame
         next, frame = vc.read()
@@ -154,11 +170,7 @@ def webcamShow():
         frameDetection, advNatural = classifyImage(frame_rgb, model, NETWORK_NAME)
         frame_bgr = cv2.cvtColor(frameDetection, cv2.COLOR_RGB2BGR)
         #cv2.imshow("webcam", frameDetection)
-        # Crea los directorios
-        createDirs(OBJECT)
         # Save the frames
-        list = os.listdir("ImageNetWebcam/%s/frames_%s/" % (OBJECT, "raw"))
-        num = len(list)
         path="ImageNetWebcam/%s/frames_%s/imageFrame_%s.png"
         num+=1
         if advNatural:

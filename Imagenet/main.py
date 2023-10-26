@@ -67,7 +67,7 @@ NetworkModelName = 'Xception'
 
 # ------------------------ Código principal ---------------------------------
 # Load model: CNN -> EfficientNetB0
-model = aux.getNetworkModel(NetworkModelName, IMG_SHAPE)
+model = aux.getNetworkModel(NetworkModelName)
 model.trainable = False
 optimizer = tf.keras.optimizers.Adam(learning_rate=LR)
 loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
