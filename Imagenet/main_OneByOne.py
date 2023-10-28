@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import gradCamInterface
 import auxiliarFunctions as aux
+from selectOrigImages import searchCloserImageByID
 
 import os
 import errno
@@ -49,23 +50,19 @@ def executeGradCam(orig, adv) :
 
 # ------------------------ Constantes ---------------------------------------
 NUM_CLASSES = 1000 #imagenet=1000
-#EFFICIENTNETB0 IMG_SIZE = (224, 224)#IMG_SHAPE = (224, 224, 3)
 IMG_SIZE = (299, 299)
 IMG_SHAPE = (299, 299, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
-NUM_IMG = 6 #Cantidad de imagenes de test
-TOTAL_IMG = 3587 #Cantidad de imagenes de las que se disponen, imagenet=50000
-#IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/luz_validos/waterBottle_InceptionV3_5000luz/frames_raw/"
-#EXECUTION_ID = "WebcamData_01" #Se usará para no sustituir variables de distintas ejecuciones
-IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/LOL_test/"
-EXECUTION_ID = "Test_InceptionResNetV2"
-#IMG_PATH = "C:/Users/User/TFG-repository/Imagenet/movil/"#cambiar parametros de entrada de loadImages segun si son de imagenet o no
-#realID='n04557648'
-realID='n01440764'
-
-#EPSILON = [20000, 30000]
+NUM_IMG = 500 #Cantidad de imagenes de test
+TOTAL_IMG = 500 #Cantidad de imagenes de las que se disponen, imagenet=50000
 ATTACK_NAME = 'FastGradientMethod'
-NetworkModelName = 'InceptionResNetV2'
+NetworkModelName = 'EfficientNetB0'
+#cambiar parametros de entrada de loadImages segun si son de imagenet o no
+IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/luz_validos/waterBottle_%s_5000luz/" % (NetworkModelName)
+folder = 'frames_naturalAdv/'#'frames_naturalAdv/' 'selectedOrigImages/'
+EXECUTION_ID = "Test_%s" % (NetworkModelName)#Se usará para no sustituir variables de distintas ejecuciones
+realID='n04557648'
+
 if NetworkModelName == "vgg16" or NetworkModelName == "VGG16" or NetworkModelName == "EfficientNetB0" or NetworkModelName == "mobileNet" or NetworkModelName == "MobileNet" :
     IMG_SIZE = (224, 224)
     IMG_SHAPE = (224, 224, 3)
@@ -82,11 +79,13 @@ num_AdvNaturales = 0
 startIndex = 0
 #Load Images
 for num_img in range(startIndex, NUM_IMG) :
-    x_test, img_test = aux.loadImage(IMG_PATH, num_img, size= IMG_SIZE, unclassified_images=True, realID=realID, networkName=NetworkModelName)# Quitar unclassified_images y realID para imagenet
+    x_test, img_test = aux.loadImage(IMG_PATH+folder, num_img, size= IMG_SIZE, unclassified_images=True, realID=realID, networkName=NetworkModelName)# Quitar unclassified_images y realID para imagenet
 #Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
 #Si unclassified_images = True: cargará las imagenes que no son de imagenet y por tanto no estan dentro de una carpeta con el valor de su ID
     print("Image name: %s" %(img_test[0].name))
-
+    if folder == 'frames_naturalAdv/':
+        closerImageName = searchCloserImageByID(img_test[0].name, IMG_PATH+'selectedOrigImages/')
+        img_test[0].addCloserOriginalImageName(closerImageName)
     #Generate Adversarial
     img_adv=[]
     img_adv.append(aux.generateAnAdversarialImage(img_test[0], x_test[0], ATTACK_NAME, classifier, isImagenet=False))
