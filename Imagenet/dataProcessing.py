@@ -110,4 +110,4 @@ for num in range(0, NUM_IMG):
             aux.addRowToCsvFile(DATA_ID+"_metrics.csv", metricsName, metricsValue)
 
     if execute_Histogram == True:
-        aux.saveHistogram(sorted_list, DATA_ID)
+        #aux.saveHistogram(sorted_list, DATA_ID)

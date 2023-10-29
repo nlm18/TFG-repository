@@ -1,11 +1,16 @@
 import os
 import errno
 import shutil
+import re
 
 # ------------------------ Funciones auxiliares ---------------------------------
-def obtainImageNumber(imageName):
-    num = imageName.replace('.png', '')
-    num = num.replace('imageFrame_', '')
+def obtainImageNumber(imageName, isPkl=False):
+    num = imageName.replace('imageFrame_', '')
+    if isPkl == True:
+        num = re.sub(r"(?P<open>[_]).*?(?P<close>[.])", '', num)
+        num = num.replace('pkl','')
+    else:
+        num = num.replace('.png', '')
     return int(num)
 
 def findCloserImage(num_ref, original_sorted_list, superior=True):
@@ -33,14 +38,14 @@ def findCloserImage(num_ref, original_sorted_list, superior=True):
         print('No se ha encontrado una imagen original cercana, comprueba la lista de fotos de la carpeta frames_raw')
     return result
 
-def sortImgList(files_orig_names, files_advNatural_names=''):
+def sortImgList(files_orig_names, files_advNatural_names='', isPkl=False):
     nat = []
     orig = []
     if files_advNatural_names != '':
         for i in range(0,len(files_advNatural_names)):
-            nat.append(obtainImageNumber(files_advNatural_names[i]))
+            nat.append(obtainImageNumber(files_advNatural_names[i], isPkl))
     for i in range(0,len(files_orig_names)):
-        orig.append(obtainImageNumber(files_orig_names[i]))
+        orig.append(obtainImageNumber(files_orig_names[i], isPkl))
     return sorted(orig), sorted(nat)
 
 # -------------------------------------------------------------------------------

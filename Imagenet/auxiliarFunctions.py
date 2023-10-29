@@ -2,6 +2,7 @@ from __future__ import print_function
 
 from Imagen import Imagen
 import gradCamInterface
+from selectOrigImages import sortImgList, obtainImageNumber
 
 import cv2
 import csv
@@ -14,6 +15,7 @@ import copy
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
 from keras.layers import Input
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
 from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump
@@ -115,6 +117,31 @@ def loadImagesByID(data_path, data_ID):
     else:
         return img_orig[0], img_adv[0]
 
+def loadImagesSorted(data_path):
+    list_files_names = os.listdir(data_path)
+    img_adv_name = [x for x in list_files_names if "_adv" in x]
+    img_orig_name = [x for x in list_files_names if "_test" in x]
+    img_orig_sorted, img_adv_sorted = sortImgList(img_orig_name, img_adv_name, isPkl=True)
+    list_sorted = sorted(img_adv_sorted+img_orig_sorted)
+
+    adv_label = img_adv_name[0].replace('imageFrame_%s' % (obtainImageNumber(img_adv_name[0], True)),'')
+    nat_label = '_testImage.pkl'
+
+    sorted_data = []
+    name_list = []
+    anterior = 0
+    for i in range(0, len(list_sorted)):
+        name = 'imageFrame_%s' % (list_sorted[i])
+        if anterior == list_sorted[i]:
+            name = name + adv_label
+        else:
+            anterior = list_sorted[i]
+            name = name + nat_label
+
+        sorted_data.append(loadVariable(data_path+name))
+        name_list.append(sorted_data[i].name)
+
+    return sorted_data, name_list
 def loadImageOneByOne(data_path):
     list_artAdv_directory = os.listdir(data_path)
 #Lo mejor sera meterlo junto en una carpeta y que lo coja ya ordenado por nombre
@@ -482,29 +509,40 @@ def addRowToCsvFile(filename, fieldnames, data):
         for i in range(0,len(fieldnames)):
             row[fieldnames[i]]=data[i]
         writer.writerow(row)
+def saveBoxPlot(heatmap_array, img_data, DATA_ID):
+    try :
+        os.mkdir('boxPlot_%s' % (DATA_ID))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
 
-def saveHistogram(sorted_list, DATA_ID):
+    type = defineTypeOfAdversarial(img_data)
+
+    plt.boxplot(x=heatmap_array, vert=False)
+    plt.title('Diagrama de caja habiendo quitado los valores 0-25, imagen %s' % (type))
+    plt.xlabel('Intensidad del mapa de activación')
+
+    plt.savefig("boxPlot_%s/boxPlot_sinRango0-25_" % (DATA_ID) + type + "_" + img_data.name)
+    plt.clf()
+def saveHistogram(heatmap_array, img_data, DATA_ID):
     try :
         os.mkdir('histogram-%s' % (DATA_ID))
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
-    for ind in range(0, len(sorted_list)) :
-        gray_heatmap = gradCamInterface.display_gray_gradcam(sorted_list[ind].data, sorted_list[ind].heatmap,
-                                                             superimposed=False)
-        gray_1channel = cv2.cvtColor(gray_heatmap, cv2.COLOR_RGB2GRAY) #plt.imshow(gray_1channel, cmap='gray')
-        type = defineTypeOfAdversarial(sorted_list[ind])
 
-        intervalos = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 255]  # indicamos los extremos de los intervalos
+    type = defineTypeOfAdversarial(img_data)
+    intervalos = [25, 50, 75, 100, 125, 150, 175, 200, 225, 255]  # indicamos los extremos de los intervalos
 
-        plt.hist(x=gray_1channel, bins=intervalos, rwidth=0.85 )
-        plt.title('Histograma del mapa de activación, imagen %s' %(type))
-        plt.xlabel('Intensidad del mapa de activación')
-        plt.ylabel('Frecuencia')
-        plt.xticks(intervalos)
+    plt.hist(x=heatmap_array, bins=intervalos, color='#40A2C6', rwidth=0.85 )#https://htmlcolorcodes.com/es/
+    plt.title('Histograma del mapa de activación, imagen %s' % (type))
+    plt.xlabel('Intensidad del mapa de activación')
+    plt.ylabel('Frecuencia')
+    plt.xticks(intervalos)
 
-        #plt.show()  # dibujamos el histograma
-        plt.savefig("histogram-%s/histogram_" % (DATA_ID) + type + "_" + sorted_list[ind].name)
+    plt.savefig("histogram-%s/sinRango0-25/histogram_" % (DATA_ID) + type + "_" + img_data.name)
+    plt.clf()
+    #fig = sm.qqplot(heatmap_array, line='45')
 
 def defineTypeOfAdversarial(img):
     if img.attackName == "":
