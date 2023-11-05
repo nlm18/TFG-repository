@@ -509,41 +509,121 @@ def addRowToCsvFile(filename, fieldnames, data):
         for i in range(0,len(fieldnames)):
             row[fieldnames[i]]=data[i]
         writer.writerow(row)
-def saveBoxPlot(heatmap_array, img_data, DATA_ID):
+
+def saveBoxPlot(heatmap_array, img_data, DATA_ID, violin=False):
+    #https://python-charts.com/es/distribucion/box-plot-matplotlib/#:~:text=Eliminar%20outliers,el%20argumento%20showfliers%20como%20False%20.
     try :
-        os.mkdir('boxPlot_%s' % (DATA_ID))
+        os.mkdir('graficas-%s' % (DATA_ID))
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
 
-    type = defineTypeOfAdversarial(img_data)
+    if img_data != "":
+        plt.boxplot(x=heatmap_array, vert=False, showmeans = True, meanline = True)
+        plt.xlabel('Intensidad del mapa de activación')
+        type = defineTypeOfAdversarial(img_data)
+        title ='Diagrama de caja, imagen %s' % (type)
+        id="_" + img_data.name
+    else:
+        type = "summary"
+        if violin:
+            id = "_violin"
+            title = "Diagrama de violin con el resumen\nde las 500 imagenes de cada tipo"
+            violin = plt.violinplot(heatmap_array, vert=True, showmeans=True, showmedians=True)
+            vp = violin['cmeans']
+            vp.set_edgecolor("#42FF33")
+            vp = violin['cmedians']
+            vp.set_edgecolor("#FF8D33")
+        else:
+            plt.boxplot(x=heatmap_array, vert=True, showfliers=False, showmeans=True, meanline=True)
+            plt.ylim(0, 255)
+            id = ""
+            title = "Diagrama de caja con el resumen\nde las 500 imagenes de cada tipo"
+        plt.xticks([1, 2, 3],["Original", "Adv. Naturales", "Adv. Artificiales"])
 
-    plt.boxplot(x=heatmap_array, vert=False)
-    plt.title('Diagrama de caja habiendo quitado los valores 0-25, imagen %s' % (type))
-    plt.xlabel('Intensidad del mapa de activación')
+    plt.title(title)
+    plt.subplots_adjust(bottom=0.1, right=0.97)
 
-    plt.savefig("boxPlot_%s/boxPlot_sinRango0-25_" % (DATA_ID) + type + "_" + img_data.name)
+    plt.savefig("graficas-%s/BoxPlot_" % (DATA_ID) + type + id)
     plt.clf()
-def saveHistogram(heatmap_array, img_data, DATA_ID):
+
+def saveHistogram(heatmap_array, img_data, DATA_ID, atck=''):
     try :
-        os.mkdir('histogram-%s' % (DATA_ID))
+        os.mkdir('graficas-%s' % (DATA_ID))
     except OSError as e :
         if e.errno != errno.EEXIST :
             raise
 
-    type = defineTypeOfAdversarial(img_data)
-    intervalos = [25, 50, 75, 100, 125, 150, 175, 200, 225, 255]  # indicamos los extremos de los intervalos
+    if img_data != "Original" and img_data != "Adv. Natural" and img_data != "Adv. Artificial":
+        type = defineTypeOfAdversarial(img_data)
+        id = "_"+img_data.name
+    else:
+        type = img_data
+        id = "_"+atck
+    intervalos = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255]  # indicamos los extremos de los intervalos
 
-    plt.hist(x=heatmap_array, bins=intervalos, color='#40A2C6', rwidth=0.85 )#https://htmlcolorcodes.com/es/
-    plt.title('Histograma del mapa de activación, imagen %s' % (type))
+    plt.hist(x=heatmap_array, bins=24, color='#40A2C6', rwidth=0.85 )#https://htmlcolorcodes.com/es/
+    plt.title('Histograma del mapa de activación,\nimagen %s' % (type))
     plt.xlabel('Intensidad del mapa de activación')
     plt.ylabel('Frecuencia')
+    plt.ylim(0, 35000)
     plt.xticks(intervalos)
+    plt.xticks(rotation=45)
+    plt.subplots_adjust(bottom=0.14, right=0.97)
 
-    plt.savefig("histogram-%s/sinRango0-25/histogram_" % (DATA_ID) + type + "_" + img_data.name)
+    plt.savefig("graficas-%s/histogram_" % (DATA_ID) + type + id)
     plt.clf()
     #fig = sm.qqplot(heatmap_array, line='45')
 
+def saveBarWithError(mean_data, freq_data, std_data, img_data, DATA_ID, atck=''):
+    try :
+        os.mkdir('graficas-%s' % (DATA_ID))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+#https://python-charts.com/es/ranking/grafico-barras-matplotlib/
+#https://cursosinformatica.ucm.es/trial/dataviz/
+    type = img_data
+    intervalos = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255]  # indicamos los extremos de los intervalos
+
+    plt.bar(x=mean_data, height=freq_data, xerr=std_data, capsize=5, color='#40A2C6', ecolor="#FF5733", width=8)#https://htmlcolorcodes.com/es/
+    plt.title('Histograma del mapa de activación,\nresumen de las 500 imágenes %s %s' % (type, atck))
+    plt.xlabel('Intensidad del mapa de activación')
+    plt.ylabel('Frecuencia')
+    plt.ylim(0, 20000)
+    plt.xticks(intervalos)
+    plt.xticks(rotation=45)
+    plt.subplots_adjust(bottom=0.1, right=0.97)
+
+    if type == "adv. naturales":
+        type = "AdvNaturales"
+    elif type == "adv. artificiales, ":
+        type = "AdvArtificiales"
+
+    plt.savefig("graficas-%s/histogram_500img_" % (DATA_ID) + type + atck)
+    plt.clf()
+
+def saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, DATA_ID, atck=''):
+    try :
+        os.mkdir('graficas-%s' % (DATA_ID))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+    #https://www.delftstack.com/es/howto/matplotlib/errorbar-python/
+    #https://interactivechaos.com/es/manual/tutorial-de-matplotlib/graficos-de-lineas-con-barras-de-error
+    #creo que seria el xerr pero como ni se pinta de lo pequeño que es
+    plt.errorbar(mean500_Orig, freq_orig, xerr=std_orig)
+    plt.errorbar(mean500_AdvNat, freq_nat, xerr=std_nat)
+    plt.errorbar(mean500_AdvArt, freq_art, xerr=std_art)
+    plt.title('Media de intensidad de las 500 imagenes frente a su frequencia')
+    plt.xlabel('Intensidad del mapa de activación')
+    plt.ylabel('Frecuencia')
+    plt.ylim(0, 20000)
+    plt.legend(["Original", "Adv. Natural", "Adv. Artificial: %s" % (atck)] )
+    plt.subplots_adjust(bottom=0.1, right=0.97)
+
+    plt.savefig("graficas-%s/summary_MeanLine_Freq_Error" % (DATA_ID))
+    plt.clf()
 def defineTypeOfAdversarial(img):
     if img.attackName == "":
         if img.predictionId == img.id:
