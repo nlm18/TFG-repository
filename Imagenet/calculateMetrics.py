@@ -7,6 +7,7 @@ from skimage.metrics import structural_similarity as ssim
 from statistics import median
 import cv2
 import pandas as pd
+import plotly.graph_objects as go
 from scipy.stats import shapiro
 import xlwt #Para escribir en excel
 
@@ -61,7 +62,7 @@ def meanFreqPerBin(bins, array):
         inf = sup+1
     return mean_array, np.array(freq_array), std_array
 
-def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art):
+def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, violin=False):
     #https://www.codigopiton.com/como-crear-un-dataframe-con-pandas-y-python/#5-c%C3%B3mo-crear-un-dataframe-a-partir-de-un-diccionario-de-listas
     columns = ['Original','Adv. Natural','Adv. Artificial']
 
@@ -76,17 +77,21 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
     dfe['Original'] = std_orig
     dfe['Adv. Natural'] = std_nat
     dfe['Adv. Artificial'] = std_art
-
-    df.plot(kind='bar', yerr=dfe, ecolor="#FF5733", width=0.8)
-    plt.legend()
-    plt.title('Histograma comparativo del mapa de activación,\nresumen de las 500 imágenes de cada tipo')
-    plt.xlabel('Intervalos de intensidad del mapa de activación')
-    plt.ylabel('Frecuencia')
-    plt.ylim(0, 20000)
-    plt.xticks([])
-    plt.subplots_adjust(bottom=0.1, right=0.97)
-    plt.savefig("graficas-%s/comparacionFreqHistograma" % (DATA_ID))
-    plt.clf()
+    if violin != True:
+        df.plot(kind='bar', yerr=dfe, ecolor="#FF5733", width=0.8)
+        plt.legend()
+        plt.title('Histograma comparativo del mapa de activación,\nresumen de las 500 imágenes de cada tipo')
+        plt.xlabel('Intervalos de intensidad del mapa de activación')
+        plt.ylabel('Frecuencia')
+        plt.ylim(0, 20000)
+        plt.xticks([])
+        plt.subplots_adjust(bottom=0.1, right=0.97)
+        plt.savefig("graficas-%s/comparacionFreqHistograma" % (DATA_ID))
+        plt.clf()
+    if violin:
+        fig = go.Figure(go.Violin(y=df, box_visible=True, line_color="#ACCBF3", meanline_visible=True,
+                              fillcolor="#ACCBF3", opacity=0.6))
+        fig.write_image("j.png")
 #https://joserzapata.github.io/courses/python-ciencia-datos/visualizacion/
 
 def combineMeanValueWithFreq(mean, freq):
@@ -99,6 +104,54 @@ def combineMeanValueWithFreq(mean, freq):
         result[inf:sup] = mean[i]
         inf = sup
     return result
+def calculateMaxCentroid(gray_heatmap, threshold):#115
+    max_values_filtered=cv2.threshold(gray_heatmap,threshold,255,cv2.THRESH_TOZERO)
+    for i in range(0, len(gray_heatmap)):
+        if (sum(max_values_filtered[1][i,:]) != 0):
+            row_max = i
+        if (sum(max_values_filtered[1][:,i]) != 0):
+            col_max = i
+    for j in reversed(range(len(gray_heatmap))):
+        if (sum(max_values_filtered[1][j,:]) != 0):
+            row_min = j
+        if (sum(max_values_filtered[1][:,j]) != 0):
+            col_min = j
+    row_centroid = round((row_max-row_min)/2)+row_min
+    col_centroid = round((col_max-col_min)/2)+col_min
+    return col_centroid, row_centroid #(x,y)
+def calculateMaxInInterval(input):
+    data = []
+    juntos = 0
+    data_array = cv2.threshold(np.array(input), 0.9, 1, cv2.THRESH_TOZERO)
+    for i in range(0, len(data_array[1])) :
+        if data_array[1][i] != 0 :
+            if juntos == 0 :
+                ini = i
+            juntos += 1
+        else :
+            if juntos != 0 :
+                data.append((ini, i))
+            juntos = 0
+    data.append((ini, i))
+    juntos = 0
+    for i in range(0, len(data)):
+        aux = data[i][1]-data[i][0]
+        if juntos < aux:
+            juntos = aux
+            interval = data[i]
+    position = interval[0]+data_array[1][interval[0]:interval[1]].argmax()
+    return position
+def calculateMinCentroid(gray_heatmap):
+    gray_heatmap_inv = abs(gray_heatmap-255)/255
+    columns_weights = []
+    rows_weights = []
+    for i in range(0, len(gray_heatmap)):
+        columns_weights.append( sum(gray_heatmap_inv[:,i])/len(gray_heatmap) )
+        rows_weights.append( sum(gray_heatmap_inv[i,:])/len(gray_heatmap) )
+    col_centroid = calculateMaxInInterval(columns_weights)
+    row_centroid = calculateMaxInInterval(rows_weights)
+
+    return col_centroid, row_centroid #(x,y)
 
 # ------------------------ Constantes ---------------------------------------
 DATA_ID = "EfficientNetB0"
@@ -220,5 +273,6 @@ summary_boxplot=[]
 summary_boxplot.append(mean_freq_Orig)
 summary_boxplot.append(mean_freq_AdvNat)
 summary_boxplot.append(mean_freq_AdvArt)
-aux.saveBoxPlot(summary_boxplot, "", DATA_ID)
-aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True)
+#aux.saveBoxPlot(summary_boxplot, "", DATA_ID)
+#aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True)
+createDataFrameToPlot(mean_freq_Orig[0:50151], mean_freq_AdvNat[0:50151], mean_freq_AdvArt[0:50151], std_orig, std_nat, std_art, violin=True)
