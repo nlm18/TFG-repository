@@ -597,18 +597,18 @@ def saveBarWithError(mean_data, freq_data, std_data, img_data, DATA_ID, atck='')
     type = img_data
     intervalos = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255]  # indicamos los extremos de los intervalos
 
-    plt.bar(x=mean_data, height=freq_data, xerr=std_data, capsize=5, color='#40A2C6', ecolor="#FF5733", width=8)#https://htmlcolorcodes.com/es/
+    plt.bar(x=mean_data, height=freq_data, yerr=std_data, capsize=5, color='#40A2C6', ecolor="#FF5733", width=8)#https://htmlcolorcodes.com/es/
     plt.title('Histograma del mapa de activación,\nresumen de las 500 imágenes %s %s' % (type, atck))
     plt.xlabel('Intensidad del mapa de activación')
     plt.ylabel('Frecuencia')
-    plt.ylim(0, 20000)
+    plt.ylim(0, 21000)
     plt.xticks(intervalos)
     plt.xticks(rotation=45)
-    plt.subplots_adjust(bottom=0.1, right=0.97)
+    plt.subplots_adjust(bottom=0.13, right=0.97)
 
     if type == "adv. naturales":
         type = "AdvNaturales"
-    elif type == "adv. artificiales, ":
+    elif type == "adv. artificiales,":
         type = "AdvArtificiales"
 
     plt.savefig("graficas-%s/histogram_500img_" % (DATA_ID) + type + atck)

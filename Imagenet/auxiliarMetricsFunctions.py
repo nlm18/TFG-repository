@@ -39,7 +39,6 @@ def meanFreqPerBin(bins, array):
     interval = 255.0/bins
     sorted_list = np.array(sorted(array))
     mean_array = []
-    std_array = []
     freq_array = []
     inf = 0
     for i in range(0, bins):
@@ -48,10 +47,20 @@ def meanFreqPerBin(bins, array):
         else:
             sup = len(sorted_list)-1
         mean_array.append(sorted_list[inf:sup].mean())
-        std_array.append(sorted_list[inf:sup].std())
         freq_array.append(len(sorted_list[inf:sup]))
         inf = sup+1
-    return mean_array, np.array(freq_array), std_array
+    return mean_array, freq_array
+
+def meanFreqTotalImgPerBin(freq_heatmap):
+    std_array = []
+    freq_array = []
+    for bin in range(0, len(freq_heatmap[0])):#por cada bin
+        aux = []
+        for img in range(0, len(freq_heatmap)):
+            aux.append(freq_heatmap[img][bin])
+        std_array.append(np.array(aux).std())
+        freq_array.append(np.array(aux).mean())
+    return freq_array, std_array
 
 def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, violin=False):
     #https://www.codigopiton.com/como-crear-un-dataframe-con-pandas-y-python/#5-c%C3%B3mo-crear-un-dataframe-a-partir-de-un-diccionario-de-listas
@@ -95,7 +104,7 @@ def combineMeanValueWithFreq(mean, freq):
         result[inf:sup] = mean[i]
         inf = sup
     return result
-def calculateMaxCentroid(gray_heatmap, threshold):#215
+def calculateMaxCentroidDraft(gray_heatmap, threshold):#215
     max_values_filtered=cv2.threshold(gray_heatmap,threshold,255,cv2.THRESH_TOZERO)
     for i in range(0, len(gray_heatmap)):
         if (sum(max_values_filtered[1][i,:]) != 0):
@@ -113,9 +122,10 @@ def calculateMaxCentroid(gray_heatmap, threshold):#215
 
 def calculateMaxInInterval(input):
     data = []
+    umbral = 0.9*max(input)
     juntos = 0
     ini = 0
-    data_array = cv2.threshold(np.array(input), 0.9, 1, cv2.THRESH_TOZERO)
+    data_array = cv2.threshold(np.array(input), umbral, 1, cv2.THRESH_TOZERO)
     for i in range(0, len(data_array[1])) :
         if data_array[1][i] != 0 :
             if juntos == 0 :
@@ -132,9 +142,21 @@ def calculateMaxInInterval(input):
         if juntos < aux:
             juntos = aux
             interval = data[i]
-    position = interval[0]+data_array[1][interval[0]:interval[1]].argmax()
+    position = interval[0]+data_array[1][interval[0]:interval[1]+1].argmax()
     return position
 
+def calculateMaxCentroid(gray_heatmap, threshold):#215
+    max_values_filtered = cv2.threshold(gray_heatmap, threshold, 255, cv2.THRESH_TOZERO)
+    max_norm = max_values_filtered[1]/255
+    columns_weights = []
+    rows_weights = []
+    for i in range(0, len(gray_heatmap)):
+        columns_weights.append( sum(max_norm[:,i])/len(gray_heatmap) )
+        rows_weights.append( sum(max_norm[i,:])/len(gray_heatmap) )
+    col_centroid = calculateMaxInInterval(columns_weights)
+    row_centroid = calculateMaxInInterval(rows_weights)
+
+    return col_centroid, row_centroid #(x,y)
 def calculateMinCentroid(gray_heatmap):
     gray_heatmap_inv = abs(gray_heatmap-255)/255
     columns_weights = []
@@ -149,7 +171,7 @@ def calculateMinCentroid(gray_heatmap):
 
 def writeCentroidsInCSV(data, gray_heatmap, threshold, gray_heatmap_orig):
     x2, y2 = calculateMaxCentroid(gray_heatmap, threshold)
-    data.append("(%s,%s)" % (x2, y2))
+    data.append("(%s - %s)" % (x2, y2))
     if gray_heatmap_orig != []:
         x1, y1 = calculateMaxCentroid(gray_heatmap_orig, threshold)
         dist_between_max = round(math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), 2)
@@ -158,7 +180,7 @@ def writeCentroidsInCSV(data, gray_heatmap, threshold, gray_heatmap_orig):
         data.append("-")
 
     x2, y2 = calculateMinCentroid(gray_heatmap)
-    data.append("(%s,%s)" % (x2, y2))
+    data.append("(%s - %s)" % (x2, y2))
     if gray_heatmap_orig != []:
         x1, y1 = calculateMinCentroid(gray_heatmap_orig)
         dist_between_min = round(math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2), 2)

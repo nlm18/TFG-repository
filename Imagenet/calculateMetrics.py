@@ -20,14 +20,14 @@ sorted_data, name_list = aux.loadImagesSorted(DATA_PATH)
 NUM_IMG = len(sorted_data)
 
 # ------------------------ Operaciones --------------------------------------
-calculate_metrics = True #tarda 'poco'
+calculate_metrics = False #tarda 'poco'
 execute_Histogram = False #tarda mucho
 execute_BoxPlot = False
 
 if calculate_metrics == True:
     metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Predicción", "Media", "Media normalizada", "Mediana",
                    "Varianza", "Desviación Típica", "Centroide Máximo", "Distancia centroides máximos",
-                   "Centroide Mínimo", "Distancia centroides mínimos" "Dif de medias", "Norma Mascara",
+                   "Centroide Mínimo", "Distancia centroides mínimos", "Dif de medias", "Norma Mascara",
                    "Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
 
@@ -35,9 +35,9 @@ bins = 24
 mean_heatmap_array_advNatural = []
 mean_heatmap_array_advArtificial = []
 mean_heatmap_array_original = []
-freq_heatmap_array_advNatural = np.zeros(shape=bins)
-freq_heatmap_array_advArtificial = np.zeros(shape=bins)
-freq_heatmap_array_original = np.zeros(shape=bins)
+freq_heatmap_array_advNatural = []
+freq_heatmap_array_advArtificial = []
+freq_heatmap_array_original = []
 for num in range(0, NUM_IMG):
     gray_heatmap = gradCamInterface.display_gray_gradcam(sorted_data[num].data, sorted_data[num].heatmap,
                                                          superimposed=False)
@@ -68,7 +68,7 @@ for num in range(0, NUM_IMG):
 
         if metricsValue[1] != "Original": #Si no es la imagen original
             # La norma es la distancia euclidea
-            metricsValue.append(round(gray_heatmap.mean(), 2)-round(heatmap_ref.mean(), 2)) #"Dif de medias"
+            metricsValue.append(round(gray_heatmap.mean()-heatmap_ref.mean(), 2)) #"Dif de medias"
             metricsValue.append(round(np.linalg.norm(gray_heatmap - heatmap_ref), 2)) #"Norma Mascara"
             metricsValue.append(round(np.linalg.norm(sorted_data[num].data - closer_orig_img.data), 2)) #"Norma Imagen"
             metricsValue.append(round(mean_squared_error(gray_heatmap, heatmap_ref), 2)) #Mean Squared Error (MSE)
@@ -94,33 +94,30 @@ for num in range(0, NUM_IMG):
     if execute_BoxPlot == True:
         aux.saveBoxPlot(heatmap_array, sorted_data[num], DATA_ID)
 
-    meanPerBin, freqPerBin, x = mf.meanFreqPerBin(bins, heatmap_array)
+    meanPerBin, freqPerBin = mf.meanFreqPerBin(bins, heatmap_array)
     if metricsValue[1] != "Original":
-        if metricsValue[1] == "Adv. Natural" :
+        if metricsValue[1] == "Adv. Natural":
             mean_heatmap_array_advNatural += meanPerBin
-            for i in range(0, bins):
-                freq_heatmap_array_advNatural[i] += freqPerBin[i]
+            freq_heatmap_array_advNatural.append(freqPerBin)
 
         else :
             mean_heatmap_array_advArtificial += meanPerBin
-            for i in range(0, bins):
-                freq_heatmap_array_advArtificial[i] += freqPerBin[i]
+            freq_heatmap_array_advArtificial.append(freqPerBin)
     else:
         mean_heatmap_array_original += meanPerBin
-        for i in range(0, bins):
-            freq_heatmap_array_original[i] += freqPerBin[i]
-'''
-freq_heatmap_array_original = freq_heatmap_array_original/500  #total imagenes
-freq_heatmap_array_advNatural = freq_heatmap_array_advNatural/500
-freq_heatmap_array_advArtificial = freq_heatmap_array_advArtificial/500
-mean500_Orig, x, std_orig = mf.meanFreqPerBin(bins, mean_heatmap_array_original)
-mean500_AdvNat, x, std_nat = mf.meanFreqPerBin(bins, mean_heatmap_array_advNatural)
-mean500_AdvArt, x, std_art = mf.meanFreqPerBin(bins, mean_heatmap_array_advArtificial)
-aux.saveBarWithError(mean500_Orig, freq_heatmap_array_original, std_orig, "originales", DATA_ID)
-aux.saveBarWithError(mean500_AdvNat, freq_heatmap_array_advNatural, std_nat, "adv. naturales", DATA_ID)
-aux.saveBarWithError(mean500_AdvArt, freq_heatmap_array_advArtificial, std_art, "adv. artificiales, ", DATA_ID,
+        freq_heatmap_array_original.append(freqPerBin)
+
+freq500_Orig, std_orig = mf.meanFreqTotalImgPerBin(freq_heatmap_array_original)
+freq500_AdvNat, std_nat = mf.meanFreqTotalImgPerBin(freq_heatmap_array_advNatural)
+freq500_AdvArt, std_art = mf.meanFreqTotalImgPerBin(freq_heatmap_array_advArtificial)
+mean500_Orig, x = mf.meanFreqPerBin(bins, mean_heatmap_array_original)
+mean500_AdvNat, x = mf.meanFreqPerBin(bins, mean_heatmap_array_advNatural)
+mean500_AdvArt, x = mf.meanFreqPerBin(bins, mean_heatmap_array_advArtificial)
+aux.saveBarWithError(mean500_Orig, freq500_Orig, std_orig, "originales", DATA_ID)
+aux.saveBarWithError(mean500_AdvNat, freq500_AdvNat, std_nat, "adv. naturales", DATA_ID)
+aux.saveBarWithError(mean500_AdvArt, freq500_AdvArt, std_art, "adv. artificiales,", DATA_ID,
                      "FastGradientMethod")
-mf.createDataFrameToPlot(freq_heatmap_array_original, freq_heatmap_array_advNatural, freq_heatmap_array_advArtificial,
+'''mf.createDataFrameToPlot(freq_heatmap_array_original, freq_heatmap_array_advNatural, freq_heatmap_array_advArtificial,
                       std_orig, std_nat, std_art)
 aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq_heatmap_array_original,
                       freq_heatmap_array_advNatural, freq_heatmap_array_advArtificial, std_orig, std_nat, std_art,
