@@ -117,19 +117,18 @@ aux.saveBarWithError(mean500_Orig, freq500_Orig, std_orig, "originales", DATA_ID
 aux.saveBarWithError(mean500_AdvNat, freq500_AdvNat, std_nat, "adv. naturales", DATA_ID)
 aux.saveBarWithError(mean500_AdvArt, freq500_AdvArt, std_art, "adv. artificiales,", DATA_ID,
                      "FastGradientMethod")
-'''mf.createDataFrameToPlot(freq_heatmap_array_original, freq_heatmap_array_advNatural, freq_heatmap_array_advArtificial,
+mf.createDataFrameToPlot(freq500_Orig, freq500_AdvNat, freq500_AdvArt,
                       std_orig, std_nat, std_art)
-aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq_heatmap_array_original,
-                      freq_heatmap_array_advNatural, freq_heatmap_array_advArtificial, std_orig, std_nat, std_art,
+aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq500_Orig,
+                      freq500_AdvNat, freq500_AdvArt, std_orig, std_nat, std_art,
                       DATA_ID, "FastGradientMethod")
 
-mean_freq_Orig = mf.combineMeanValueWithFreq(mean500_Orig, freq_heatmap_array_original)
-mean_freq_AdvNat = mf.combineMeanValueWithFreq(mean500_AdvNat, freq_heatmap_array_advNatural)
-mean_freq_AdvArt = mf.combineMeanValueWithFreq(mean500_AdvArt, freq_heatmap_array_advArtificial)
+mean_freq_Orig = mf.combineMeanValueWithFreq(mean500_Orig, freq500_Orig)
+mean_freq_AdvNat = mf.combineMeanValueWithFreq(mean500_AdvNat, freq500_AdvNat)
+mean_freq_AdvArt = mf.combineMeanValueWithFreq(mean500_AdvArt, freq500_AdvArt)
 summary_boxplot=[]
 summary_boxplot.append(mean_freq_Orig)
 summary_boxplot.append(mean_freq_AdvNat)
 summary_boxplot.append(mean_freq_AdvArt)
-#aux.saveBoxPlot(summary_boxplot, "", DATA_ID)
-#aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True)
-mf.createDataFrameToPlot(mean_freq_Orig[0:50151], mean_freq_AdvNat[0:50151], mean_freq_AdvArt[0:50151], std_orig, std_nat, std_art, violin=True)'''
+aux.saveBoxPlot(summary_boxplot, "", DATA_ID)
+aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True)

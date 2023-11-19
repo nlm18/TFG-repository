@@ -532,19 +532,11 @@ def saveBoxPlot(heatmap_array, img_data, DATA_ID, violin=False):
         if violin:
             id = "_violin"
             title = "Diagrama de violin con el resumen\nde las 500 imagenes de cada tipo"
-            '''violin = plt.violinplot(heatmap_array, vert=True, showmeans=True, showmedians=True)
+            violin = plt.violinplot(heatmap_array, vert=True, showmeans=True, showmedians=True)
             vp = violin['cmeans']
             vp.set_edgecolor("#42FF33")
             vp = violin['cmedians']
-            vp.set_edgecolor("#FF8D33")'''
-
-            fig = go.Figure(go.Violin(heatmap_array, box_visible=True, line_color="#ACCBF3", meanline_visible=True,
-                                      fillcolor="#ACCBF3", opacity=0.6))
-            '''fig = px.violin(heatmap_array, box=True)
-            fig.update_traces(fillcolor='#ACCBF3',  # Color de fondo
-                              line_color='#ACCBF3',  # Color de borde
-                              marker_line_outliercolor='black',  # Color de borde de los atípicos             #box_fillcolor='red',  # Color del box plot
-                              opacity=0.5)'''
+            vp.set_edgecolor("#FF8D33")
         else:
             plt.boxplot(x=heatmap_array, vert=True, showfliers=False, showmeans=True, meanline=True)
             plt.ylim(0, 255)

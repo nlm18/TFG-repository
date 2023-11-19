@@ -62,7 +62,7 @@ def meanFreqTotalImgPerBin(freq_heatmap):
         freq_array.append(np.array(aux).mean())
     return freq_array, std_array
 
-def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, violin=False):
+def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, DATA_ID, violin=False):
     #https://www.codigopiton.com/como-crear-un-dataframe-con-pandas-y-python/#5-c%C3%B3mo-crear-un-dataframe-a-partir-de-un-diccionario-de-listas
     columns = ['Original','Adv. Natural','Adv. Artificial']
 
@@ -88,7 +88,7 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
         plt.subplots_adjust(bottom=0.1, right=0.97)
         plt.savefig("graficas-%s/comparacionFreqHistograma" % (DATA_ID))
         plt.clf()
-    if violin:
+    if violin:#este es el feo
         fig = go.Figure(go.Violin(y=df, box_visible=True, line_color="#ACCBF3", meanline_visible=True,
                               fillcolor="#ACCBF3", opacity=0.6))
         fig.write_image("j.png")
