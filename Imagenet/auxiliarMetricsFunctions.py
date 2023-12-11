@@ -78,7 +78,7 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
     dfe['Adv. Natural'] = std_nat
     dfe['Adv. Artificial'] = std_art
     if violin != True:
-        df.plot(kind='bar', yerr=dfe, ecolor="#FF5733", width=0.8)
+        df.plot(kind='bar', ecolor="#FF5733", width=0.8)#, yerr=dfe
         plt.legend()
         plt.title('Histograma comparativo del mapa de activación,\nresumen de las 500 imágenes de cada tipo')
         plt.xlabel('Intervalos de intensidad del mapa de activación')
