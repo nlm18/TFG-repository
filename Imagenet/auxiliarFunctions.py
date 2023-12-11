@@ -324,9 +324,9 @@ def getAttackMethod(name, classifier, epsilon):
         return FastGradientMethod(estimator=classifier, eps=epsilon, norm=2, batch_size=4)
     elif name == 'BasicIterativeMethod':
         return BasicIterativeMethod(estimator=classifier, eps=epsilon, max_iter=100, batch_size=4)
-    elif name == 'ProjectedGradientDescent':
+    elif name == 'ProjectedGradientDescent':# este
         return ProjectedGradientDescent(estimator=classifier, eps=epsilon, max_iter=100, batch_size=4)
-    elif name == 'CarliniLInfMethod':
+    elif name == 'CarliniLInfMethod': # este
         return CarliniLInfMethod(classifier=classifier, confidence=epsilon, learning_rate=0.2, max_iter=10, batch_size=4)
     elif name == 'HopSkipJump':
         return HopSkipJump(classifier=classifier, max_iter=50, batch_size=4)
@@ -615,9 +615,9 @@ def saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq_ori
     #https://www.delftstack.com/es/howto/matplotlib/errorbar-python/
     #https://interactivechaos.com/es/manual/tutorial-de-matplotlib/graficos-de-lineas-con-barras-de-error
     #creo que seria el xerr pero como ni se pinta de lo pequeño que es
-    plt.errorbar(mean500_Orig, freq_orig, xerr=std_orig)
-    plt.errorbar(mean500_AdvNat, freq_nat, xerr=std_nat)
-    plt.errorbar(mean500_AdvArt, freq_art, xerr=std_art)
+    plt.errorbar(mean500_Orig, freq_orig)#, xerr=std_orig
+    plt.errorbar(mean500_AdvNat, freq_nat)
+    plt.errorbar(mean500_AdvArt, freq_art)
     plt.title('Media de intensidad de las 500 imagenes frente a su frequencia')
     plt.xlabel('Intensidad del mapa de activación')
     plt.ylabel('Frecuencia')
