@@ -12,7 +12,7 @@ import auxiliarFunctions as aux
 import auxiliarMetricsFunctions as mf
 
 # ------------------------ Constantes ---------------------------------------
-DATA_ID = "EfficientNetB0"
+DATA_ID = "InceptionResNetV2"
 DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_Test_%s/" % (DATA_ID)
 NUM_ATCKS = 1 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
 
@@ -20,7 +20,7 @@ sorted_data, name_list = aux.loadImagesSorted(DATA_PATH)
 NUM_IMG = len(sorted_data)
 
 # ------------------------ Operaciones --------------------------------------
-calculate_metrics = False #tarda 'poco'
+calculate_metrics = True #tarda 'poco'
 execute_Histogram = False #tarda mucho
 execute_BoxPlot = False
 
@@ -118,7 +118,7 @@ aux.saveBarWithError(mean500_AdvNat, freq500_AdvNat, std_nat, "adv. naturales", 
 aux.saveBarWithError(mean500_AdvArt, freq500_AdvArt, std_art, "adv. artificiales,", DATA_ID,
                      "FastGradientMethod")
 mf.createDataFrameToPlot(freq500_Orig, freq500_AdvNat, freq500_AdvArt,
-                      std_orig, std_nat, std_art)
+                      std_orig, std_nat, std_art, DATA_ID)
 aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq500_Orig,
                       freq500_AdvNat, freq500_AdvArt, std_orig, std_nat, std_art,
                       DATA_ID, "FastGradientMethod")
