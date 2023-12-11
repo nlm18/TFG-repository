@@ -56,10 +56,10 @@ def selectImages():
     DATA_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/luz_validos/waterBottle_Xception_5000luz/"
     files_advNatural_names = os.listdir(DATA_PATH+"frames_naturalAdv")
     #files_orig_names = os.listdir(DATA_PATH+"frames_raw")
-    DISCO_DURO_PATH = "D:/TFG_VISILAB_FOTOS/luz_validos/waterBottle_Xception_5000luz/frames_raw/"
+    DISCO_DURO_PATH = "D:/TFG_VISILAB_FOTOS/case01_waterBottle/imagenes_originales/waterBottle_Xception_5000luz/frames_raw/"
     files_orig_names = os.listdir(DISCO_DURO_PATH)
 
-    natural_sorted_list, original_sorted_list = sortImgList(files_orig_names, files_advNatural_names)
+    original_sorted_list, natural_sorted_list = sortImgList(files_orig_names, files_advNatural_names)
 
     try :
         os.mkdir(DATA_PATH+'selectedOrigImages')
@@ -77,7 +77,7 @@ def selectImages():
         else:
             selected_orig_names.append('imageFrame_%s.png' % (inf))
 
-    for i in range(0,len(selected_orig_names)):
+    for i in range(0, len(selected_orig_names)):
         #shutil.copy( DATA_PATH + 'frames_raw/' + selected_orig_names[i], DATA_PATH + "selectedOrigImages/" + selected_orig_names[i])
         shutil.copy(DISCO_DURO_PATH + selected_orig_names[i],
                     DATA_PATH + "selectedOrigImages/" + selected_orig_names[i])
@@ -93,7 +93,8 @@ def searchCloserImageByID(imageName, DATA_PATH_ORIG):
     else:
         return 'imageFrame_%s.png' % (inf)
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
+    selectImages()
  #   imageName = 'imageFrame_1916.png'
   #  DATA_PATH_ORIG= 'C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/luz_validos/waterBottle_EfficientNetB0_5000luz/selectedOrigImages/'
     #searchCloserImageByID(imageName, DATA_PATH_ORIG)
