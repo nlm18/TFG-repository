@@ -12,7 +12,7 @@ import auxiliarFunctions as aux
 import auxiliarMetricsFunctions as mf
 
 # ------------------------ Constantes ---------------------------------------
-DATA_ID = "InceptionResNetV2"
+DATA_ID = "EfficientNetB0"
 DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_Test_%s/" % (DATA_ID)
 NUM_ATCKS = 1 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
 
@@ -68,7 +68,7 @@ for num in range(0, NUM_IMG):
 
         if metricsValue[1] != "Original": #Si no es la imagen original
             # La norma es la distancia euclidea
-            metricsValue.append(round(gray_heatmap.mean()-heatmap_ref.mean(), 2)) #"Dif de medias"
+            metricsValue.append(abs(round(gray_heatmap.mean()-heatmap_ref.mean(), 2))) #"Dif de medias"
             metricsValue.append(round(np.linalg.norm(gray_heatmap - heatmap_ref), 2)) #"Norma Mascara"
             metricsValue.append(round(np.linalg.norm(sorted_data[num].data - closer_orig_img.data), 2)) #"Norma Imagen"
             metricsValue.append(round(mean_squared_error(gray_heatmap, heatmap_ref), 2)) #Mean Squared Error (MSE)
