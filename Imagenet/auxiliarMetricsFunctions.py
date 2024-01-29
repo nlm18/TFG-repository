@@ -4,6 +4,7 @@ import cv2
 import pandas as pd
 import plotly.graph_objects as go
 import math
+from metricsData import MetricsData
 
 def writeDataImageInCSV(data, img):
     data.append(img.name)
@@ -19,6 +20,21 @@ def writeDataImageInCSV(data, img):
         data.append(img.epsilon)
     data.append(img.predictionName)
     return data
+def initializeVariablesToSave(advVector, img):
+    vectorType = ["Original", "Adv. Natural"] + advVector
+    variables = []
+    for i in range(0, len(vectorType)):
+        variables.append(MetricsData(vectorType[i], img.networkModelName, img.idName))
+    return variables
+def saveMetricsInVariable(advVector, metricsData, variable):
+    type = metricsData[1]
+    if type == "Original":
+        variable[0].addMetricsValue(metricsData)
+    elif  type == "Adv. Natural":
+        variable[1].addMetricsValue(metricsData)
+    for i in range(0, len(advVector)):
+        if type == advVector[i]:
+            variable[i+2].addMetricsValue(metricsData)
 
 def searchCloserOriginalImage(img_test, name_list, num):
 #Se parte de que el objeto imagen tiene un parametro que dice el nombre de su imagen original mas cercana
@@ -62,9 +78,9 @@ def meanFreqTotalImgPerBin(freq_heatmap):
         freq_array.append(np.array(aux).mean())
     return freq_array, std_array
 
-def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, DATA_ID, violin=False):
+def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_art, DATA_ID, violin=False, atck='Adv. Artificial'):
     #https://www.codigopiton.com/como-crear-un-dataframe-con-pandas-y-python/#5-c%C3%B3mo-crear-un-dataframe-a-partir-de-un-diccionario-de-listas
-    columns = ['Original','Adv. Natural','Adv. Artificial']
+    columns = ['Original','Adv. Natural', atck]
 
     df = pd.DataFrame(columns=columns)
     dfe = pd.DataFrame(columns=columns)
@@ -72,18 +88,18 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
     # añadimos filas por su nombre de fila
     df['Original'] = list(freq_orig)
     df['Adv. Natural'] = list(freq_nat)
-    df['Adv. Artificial'] = list(freq_art)
+    df[atck] = list(freq_art)
     # añadimos filas por su nombre de fila
     dfe['Original'] = std_orig
     dfe['Adv. Natural'] = std_nat
-    dfe['Adv. Artificial'] = std_art
+    dfe[atck] = std_art
     if violin != True:
         df.plot(kind='bar', ecolor="#FF5733", width=0.8)#, yerr=dfe
-        plt.legend()
+        plt.legend(["Original", "Adv. Natural", "Adv. Artificial: %s" % (atck)])
         plt.title('Histograma comparativo del mapa de activación,\nresumen de las 500 imágenes de cada tipo')
         plt.xlabel('Intervalos de intensidad del mapa de activación')
         plt.ylabel('Frecuencia')
-        plt.ylim(0, 20000)
+        #plt.ylim(0, 20000)
         plt.xticks([])
         plt.subplots_adjust(bottom=0.1, right=0.97)
         plt.savefig("graficas-%s/comparacionFreqHistograma" % (DATA_ID))

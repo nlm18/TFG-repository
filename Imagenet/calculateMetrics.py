@@ -11,12 +11,14 @@ import gradCamInterface
 import auxiliarFunctions as aux
 import auxiliarMetricsFunctions as mf
 
+#https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html
+#https://www.jmp.com/es_es/statistics-knowledge-portal/t-test/two-sample-t-test.html
 # ------------------------ Constantes ---------------------------------------
-DATA_ID = "EfficientNetB0"
-DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_Test_%s/" % (DATA_ID)
-NUM_ATCKS = 1 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
-
-sorted_data, name_list = aux.loadImagesSorted(DATA_PATH)
+DATA_ID = "EfficientNetB0" #EfficientNetB0
+DATA_PATH = "D:/TFG_VISILAB_FOTOS/case02_FountainPen/variablesIndividuales_Test_%s/" % (DATA_ID) #"D:/TFG_VISILAB_FOTOS/case01_waterBottle/results_%s/variablesIndividuales_Test_%s/" % (DATA_ID, DATA_ID)#"C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_Test_%s/" % (DATA_ID)
+NUM_ATCKS = 3 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
+ATCK_NAME = ["BasicIterativeMethod", "FastGradientMethod", "ProjectedGradientDescent"]
+sorted_data, name_list = aux.loadImagesSorted(DATA_PATH, NUM_ATCKS)
 NUM_IMG = len(sorted_data)
 
 # ------------------------ Operaciones --------------------------------------
@@ -38,6 +40,8 @@ mean_heatmap_array_original = []
 freq_heatmap_array_advNatural = []
 freq_heatmap_array_advArtificial = []
 freq_heatmap_array_original = []
+valoresMetricas = mf.initializeVariablesToSave(ATCK_NAME, sorted_data[0]) #Dentro del vector ira Orig - AdvNatural - Adv1 - Adv2...
+
 for num in range(0, NUM_IMG):
     gray_heatmap = gradCamInterface.display_gray_gradcam(sorted_data[num].data, sorted_data[num].heatmap,
                                                          superimposed=False)
@@ -85,6 +89,7 @@ for num in range(0, NUM_IMG):
                 metricsValue.append("-")
 
         aux.addRowToCsvFile(DATA_ID+"_metrics.csv", metricsName, metricsValue)
+        mf.saveMetricsInVariable(ATCK_NAME, metricsValue, valoresMetricas)
 
     #heatmap_array_sinMenorQue25 = [x for x in heatmap_array if x > 25]
     #https://joserzapata.github.io/courses/python-ciencia-datos/visualizacion/
@@ -93,7 +98,7 @@ for num in range(0, NUM_IMG):
         aux.saveHistogram(heatmap_array, sorted_data[num], DATA_ID)#Parece distribucion geometrica/exponencial xd
     if execute_BoxPlot == True:
         aux.saveBoxPlot(heatmap_array, sorted_data[num], DATA_ID)
-
+    '''
     meanPerBin, freqPerBin = mf.meanFreqPerBin(bins, heatmap_array)
     if metricsValue[1] != "Original":
         if metricsValue[1] == "Adv. Natural":
@@ -116,12 +121,12 @@ mean500_AdvArt, x = mf.meanFreqPerBin(bins, mean_heatmap_array_advArtificial)
 aux.saveBarWithError(mean500_Orig, freq500_Orig, std_orig, "originales", DATA_ID)
 aux.saveBarWithError(mean500_AdvNat, freq500_AdvNat, std_nat, "adv. naturales", DATA_ID)
 aux.saveBarWithError(mean500_AdvArt, freq500_AdvArt, std_art, "adv. artificiales,", DATA_ID,
-                     "FastGradientMethod")
+                     ATCK_NAME)
 mf.createDataFrameToPlot(freq500_Orig, freq500_AdvNat, freq500_AdvArt,
-                      std_orig, std_nat, std_art, DATA_ID)
+                      std_orig, std_nat, std_art, DATA_ID, atck=ATCK_NAME)
 aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq500_Orig,
                       freq500_AdvNat, freq500_AdvArt, std_orig, std_nat, std_art,
-                      DATA_ID, "FastGradientMethod")
+                      DATA_ID, ATCK_NAME)
 
 mean_freq_Orig = mf.combineMeanValueWithFreq(mean500_Orig, freq500_Orig)
 mean_freq_AdvNat = mf.combineMeanValueWithFreq(mean500_AdvNat, freq500_AdvNat)
@@ -130,5 +135,7 @@ summary_boxplot=[]
 summary_boxplot.append(mean_freq_Orig)
 summary_boxplot.append(mean_freq_AdvNat)
 summary_boxplot.append(mean_freq_AdvArt)
-aux.saveBoxPlot(summary_boxplot, "", DATA_ID)
-aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True)
+aux.saveBoxPlot(summary_boxplot, "", DATA_ID, atck=ATCK_NAME)
+aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True, atck=ATCK_NAME)
+'''
+aux.saveVariable(valoresMetricas, "vectoresMetricas_%s.pkl" % (DATA_ID))
