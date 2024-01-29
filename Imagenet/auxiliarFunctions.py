@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 import statsmodels.api as sm
 from keras.layers import Input
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
-from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump
+from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump, Wasserstein
 from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientnet0
 from keras.applications.xception import Xception, preprocess_input as preprocess_xception, decode_predictions as decode_xception
 from keras.applications.inception_v3 import InceptionV3, preprocess_input as preprocess_inceptionv3, decode_predictions as decode_inceptionv3
@@ -120,23 +120,29 @@ def loadImagesByID(data_path, data_ID):
     else:
         return img_orig[0], img_adv[0]
 
-def loadImagesSorted(data_path):
+def loadImagesSorted(data_path, num_atcks):
     list_files_names = os.listdir(data_path)
     img_adv_name = [x for x in list_files_names if "_adv" in x]
     img_orig_name = [x for x in list_files_names if "_test" in x]
     img_orig_sorted, img_adv_sorted = sortImgList(img_orig_name, img_adv_name, isPkl=True)
     list_sorted = sorted(img_adv_sorted+img_orig_sorted)
+    adv_label = []
+    for i in range(0, num_atcks):
+        adv_label.append(img_adv_name[i].replace('imageFrame_%s' % (obtainImageNumber(img_adv_name[i], True)), ''))
 
-    adv_label = img_adv_name[0].replace('imageFrame_%s' % (obtainImageNumber(img_adv_name[0], True)),'')
     nat_label = '_testImage.pkl'
 
     sorted_data = []
     name_list = []
     anterior = 0
+    cont_atcks = 0
     for i in range(0, len(list_sorted)):
         name = 'imageFrame_%s' % (list_sorted[i])
         if anterior == list_sorted[i]:
-            name = name + adv_label
+            name = name + adv_label[cont_atcks]
+            cont_atcks = cont_atcks + 1
+            if cont_atcks == num_atcks:
+                cont_atcks = 0
         else:
             anterior = list_sorted[i]
             name = name + nat_label
@@ -234,23 +240,60 @@ def generateAnAdversarialImage(originalImage, x_test, attackName, classifier, is
     # Para distintos valores de epsilon
     arrayShape = (1, originalImage.size[0], originalImage.size[1], 3)
     img_array_test = np.ndarray(shape=arrayShape, dtype='float32')
-    epsilon = 2500
+    aux = [30,15,5] #[0.1,0.025,0.05]
+    epsilon = 100 #fastG: epsilon = 2500 botellas: epsilon=25 boli: eps=5
     # Si es un adversario natural o no acierta la imagen original de imagenet no hace falta que genere imagenes con ataques
     if isValidToCreateAdversarialExample(originalImage, classifier, isImagenet) == False:
         img_array_test[0] = x_test*0
     else:
         img_array_test[0] = originalImage.data
+    limSup = False
+    limInf = False
+    eps = 0
     # Generate adversarial test examples
-    while True:
+    x_test_adv = None
+    attack = getAttackMethod(attackName, classifier, epsilon)
+    x_test_adv = attack.generate(x=img_array_test)
+    isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
+    x_adv = x_test_adv[0]
+    if isValidAdversarial :
+        x_adv = x_test_adv[0]
+    '''while True:
         attack = getAttackMethod(attackName, classifier, epsilon)
-        x_test_adv = attack.generate(x=img_array_test)
-        isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
-        if isValidAdversarial:
-            break
-        else:
-            epsilon += 2500
 
-    adv_imagen = createAdvImagenFromOriginal(originalImage, x_test_adv[0], attackName, epsilon, predictionID)
+        if attackName != 'HopSkipJump':
+            x_test_adv = attack.generate(x=img_array_test)
+            isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
+            if isValidAdversarial: #Epsilon que hace que sea un ejemplo adversario
+                limSup = True
+                eps = copy.deepcopy(epsilon)
+                x_adv = copy.deepcopy(x_test_adv[0])
+                epsilon -= aux[1] # se resta para ver si es el primer valor de epsilon que consigue un adversario
+                if epsilon == aux[0]:
+                    epsilon += aux[2]
+                if limInf or epsilon <= 0:
+                    epsilon = eps
+                    break
+            else:
+                ind = 0
+                if limSup == True:
+                    limInf = True
+                    ind = 2
+                epsilon += aux[ind]
+                if epsilon == eps:
+                    break
+        else:
+            x_test_adv = attack.generate(x=img_array_test, x_adv_init=x_test_adv, resume=True)
+            isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
+
+            if isValidAdversarial:
+                x_adv = copy.deepcopy(x_test_adv[0])
+            break
+
+            epsilon += aux[2]'''
+
+
+    adv_imagen = createAdvImagenFromOriginal(originalImage, x_adv, attackName, epsilon, predictionID)
     return adv_imagen
 
 def saveVariable(datos, filename):
@@ -261,7 +304,6 @@ def loadVariable(filename):
      with open(filename, "rb") as f:
          return pickle.load(f)
 def getNetworkModel(NetworkModelName):
-#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
     if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
         return EfficientNetB0(weights="imagenet", include_top=True, classes=1000, input_shape=(224, 224, 3))
     elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
@@ -290,7 +332,6 @@ def preprocess_input(NetworkModelName, img_array):
         return preprocess_mobileNet(img_array)
 
 def decode_predictions(NetworkModelName, preds):
-#attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
     if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
         return decode_efficientnet0(preds, top=1)
     elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
@@ -316,7 +357,7 @@ def getLastConvLayerName(NetworkModelName):
     elif NetworkModelName == 'VGG16' or NetworkModelName == 'vgg16' :
         return "block5_conv3" #no tiene activacion, parametros 2359808, el que tiene param 0 es block5_pool
     elif NetworkModelName == 'MobileNet' or NetworkModelName == 'mobileNet' :
-        return "conv_pw_13" #conv_pw_13_relu param:0/ conv_pw_13 param: 1048576
+        return "conv_preds" #conv_pw_13_relu param:0/ conv_pw_13 param: 1048576 conv_preds param:1025000
 
 def getAttackMethod(name, classifier, epsilon):
 #attackName = ['FastGradientMethod', 'BasicIterativeMethod', 'ProjectedGradientDescent', 'CarliniLInfMethod', 'HopSkipJump']
@@ -329,7 +370,9 @@ def getAttackMethod(name, classifier, epsilon):
     elif name == 'CarliniLInfMethod': # este
         return CarliniLInfMethod(classifier=classifier, confidence=epsilon, learning_rate=0.2, max_iter=10, batch_size=4)
     elif name == 'HopSkipJump':
-        return HopSkipJump(classifier=classifier, max_iter=50, batch_size=4)
+        return HopSkipJump(classifier=classifier, targeted=False, max_iter=100, max_eval=200, batch_size=4)#norm="inf"
+    elif name == 'Wasserstein':
+        return Wasserstein(estimator=classifier, eps=epsilon, max_iter=5, batch_size=4)
 
 def createFigure(list_of_images, imagen_data, resultColumn='GradCam'):
     if imagen_data[0].advNatural:
@@ -513,7 +556,7 @@ def addRowToCsvFile(filename, fieldnames, data):
             row[fieldnames[i]]=data[i]
         writer.writerow(row)
 
-def saveBoxPlot(heatmap_array, img_data, DATA_ID, violin=False):
+def saveBoxPlot(heatmap_array, img_data, DATA_ID, violin=False, atck='Adv. Artificiales'):
     #https://python-charts.com/es/distribucion/box-plot-matplotlib/#:~:text=Eliminar%20outliers,el%20argumento%20showfliers%20como%20False%20.
     try :
         os.mkdir('graficas-%s' % (DATA_ID))
@@ -542,7 +585,7 @@ def saveBoxPlot(heatmap_array, img_data, DATA_ID, violin=False):
             plt.ylim(0, 255)
             id = ""
             title = "Diagrama de caja con el resumen\nde las 500 imagenes de cada tipo"
-        plt.xticks([1, 2, 3],["Original", "Adv. Naturales", "Adv. Artificiales"])
+        plt.xticks([1, 2, 3],["Original", "Adv. Naturales", atck])
 
     plt.title(title)
     plt.subplots_adjust(bottom=0.1, right=0.97)
@@ -593,7 +636,7 @@ def saveBarWithError(mean_data, freq_data, std_data, img_data, DATA_ID, atck='')
     plt.title('Histograma del mapa de activación,\nresumen de las 500 imágenes %s %s' % (type, atck))
     plt.xlabel('Intensidad del mapa de activación')
     plt.ylabel('Frecuencia')
-    plt.ylim(0, 21000)
+    #plt.ylim(0, 21000)
     plt.xticks(intervalos)
     plt.xticks(rotation=45)
     plt.subplots_adjust(bottom=0.13, right=0.97)
@@ -621,7 +664,7 @@ def saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq_ori
     plt.title('Media de intensidad de las 500 imagenes frente a su frequencia')
     plt.xlabel('Intensidad del mapa de activación')
     plt.ylabel('Frecuencia')
-    plt.ylim(0, 20000)
+    #plt.ylim(0, 20000)
     plt.legend(["Original", "Adv. Natural", "Adv. Artificial: %s" % (atck)] )
     plt.subplots_adjust(bottom=0.1, right=0.97)
 
