@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import os
+import errno
 import pandas as pd
 import plotly.graph_objects as go
 import math
@@ -204,3 +206,23 @@ def writeCentroidsInCSV(data, gray_heatmap, threshold, gray_heatmap_orig):
     else:
         data.append("-")
     return data
+
+def saveHistogram(metrics_data, DATA_ID, save=True):
+    try :
+        os.mkdir('graficas-%s' % (DATA_ID))
+    except OSError as e :
+        if e.errno != errno.EEXIST :
+            raise
+
+    plt.hist(x=metrics_data, bins=24, color='#40A2C6', rwidth=0.85)#https://htmlcolorcodes.com/es/
+    plt.title('Histograma del \nimagen %s' % (DATA_ID))
+    plt.xlabel('Intensidad del mapa de activación')
+    plt.ylabel('Frecuencia')
+    plt.xticks(rotation=45)
+    plt.subplots_adjust(bottom=0.14, right=0.97)
+
+    if save:
+        plt.savefig("graficas-%s/histogram_" % (DATA_ID))
+    else:
+        plt.imshow()
+    plt.clf()
