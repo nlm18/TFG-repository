@@ -14,10 +14,10 @@ import auxiliarMetricsFunctions as mf
 #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html
 #https://www.jmp.com/es_es/statistics-knowledge-portal/t-test/two-sample-t-test.html
 # ------------------------ Constantes ---------------------------------------
-DATA_ID = "EfficientNetB0" #EfficientNetB0
+DATA_ID = "Xception" #EfficientNetB0
 DATA_PATH = "D:/TFG_VISILAB_FOTOS/case02_FountainPen/variablesIndividuales_Test_%s/" % (DATA_ID) #"D:/TFG_VISILAB_FOTOS/case01_waterBottle/results_%s/variablesIndividuales_Test_%s/" % (DATA_ID, DATA_ID)#"C:/Users/User/TFG-repository/Imagenet/variablesIndividuales_Test_%s/" % (DATA_ID)
-NUM_ATCKS = 3 #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
-ATCK_NAME = ["BasicIterativeMethod", "FastGradientMethod", "ProjectedGradientDescent"]
+ATCK_NAME = ["FastGradientMethod", "ProjectedGradientDescent"]
+NUM_ATCKS = len(ATCK_NAME) #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
 sorted_data, name_list = aux.loadImagesSorted(DATA_PATH, NUM_ATCKS)
 NUM_IMG = len(sorted_data)
 
