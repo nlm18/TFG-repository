@@ -54,7 +54,7 @@ function calculateStatistics(dataPath,outputPath)
                     ttestTable{c,'metric'}=string(metricName);
                     ttestTable{c,'combination'}=string(combinationsNames{c});
                     ttestTable{c,'ttestT'}=ttestT;
-                    ttestTable{c,'ttestP'}=ttestP;
+                    ttestTable{c,'ttestP'}=round(ttestP,5);
                 end
                 ttestTableFull=[ttestTableFull;ttestTable];
             end
