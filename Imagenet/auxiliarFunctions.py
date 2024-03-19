@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 import statsmodels.api as sm
 from keras.layers import Input
 #Mas ataques: https://adversarial-robustness-toolbox.readthedocs.io/en/latest/modules/attacks/evasion.html#fast-gradient-method-fgm
-from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump, Wasserstein
+from art.attacks.evasion import FastGradientMethod, BasicIterativeMethod, ProjectedGradientDescent, CarliniLInfMethod, HopSkipJump, Wasserstein, ZooAttack, BoundaryAttack
 from keras.applications.efficientnet import EfficientNetB0, decode_predictions as decode_efficientnet0
 from keras.applications.xception import Xception, preprocess_input as preprocess_xception, decode_predictions as decode_xception
 from keras.applications.inception_v3 import InceptionV3, preprocess_input as preprocess_inceptionv3, decode_predictions as decode_inceptionv3
@@ -241,7 +241,9 @@ def generateAnAdversarialImage(originalImage, x_test, attackName, classifier, is
     arrayShape = (1, originalImage.size[0], originalImage.size[1], 3)
     img_array_test = np.ndarray(shape=arrayShape, dtype='float32')
     aux = [30,15,5] #[0.1,0.025,0.05]
-    epsilon = 100 #fastG: epsilon = 2500 botellas: epsilon=25 boli: eps=5
+    initial = 20
+    epsilon = 20 #fastG: epsilon = 2500 botellas: epsilon=25 boli: eps=5
+    singleExecution = True
     # Si es un adversario natural o no acierta la imagen original de imagenet no hace falta que genere imagenes con ataques
     if isValidToCreateAdversarialExample(originalImage, classifier, isImagenet) == False:
         img_array_test[0] = x_test*0
@@ -252,48 +254,63 @@ def generateAnAdversarialImage(originalImage, x_test, attackName, classifier, is
     eps = 0
     # Generate adversarial test examples
     x_test_adv = None
-    attack = getAttackMethod(attackName, classifier, epsilon)
-    x_test_adv = attack.generate(x=img_array_test)
-    isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
-    x_adv = x_test_adv[0]
-    if isValidAdversarial :
-        x_adv = x_test_adv[0]
-    '''while True:
+    while True:
         attack = getAttackMethod(attackName, classifier, epsilon)
 
-        if attackName != 'HopSkipJump':
+        if singleExecution != True: # 'HopSkipJump':Wasserstein
             x_test_adv = attack.generate(x=img_array_test)
             isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
             if isValidAdversarial: #Epsilon que hace que sea un ejemplo adversario
-                limSup = True
                 eps = copy.deepcopy(epsilon)
                 x_adv = copy.deepcopy(x_test_adv[0])
-                epsilon -= aux[1] # se resta para ver si es el primer valor de epsilon que consigue un adversario
-                if epsilon == aux[0]:
-                    epsilon += aux[2]
-                if limInf or epsilon <= 0:
-                    epsilon = eps
-                    break
-            else:
-                ind = 0
-                if limSup == True:
+                pred_ID = copy.deepcopy(predictionID)
+                if attackName != 'HopSkipJump' and attackName != 'BoundaryAttack':
+                    limSup = True
+                    epsilon -= aux[1] # se resta para ver si es el primer valor de epsilon que consigue un adversario
+                    if epsilon == aux[0] or epsilon == initial:
+                        epsilon += aux[2]
+                    if limInf or epsilon <= 0:
+                        epsilon = eps
+                        break
+                else: #es HopSkipJump, el epsilon aqui representaria el numero de max_iter
                     limInf = True
-                    ind = 2
-                epsilon += aux[ind]
+                    if epsilon < 80:
+                        epsilon += aux[1] # se suma para ver si es el primer valor de max_iter que consigue un adversario
+                    else:
+                        break
+                    if epsilon == aux[0] or epsilon == initial:
+                        epsilon -= aux[2]
+                    if limSup or epsilon <= 0:
+                        epsilon = eps
+                        break
+
+            else: #no se consiguió un ejemplo adversario
+                ind = 0
+                if attackName != 'HopSkipJump' and attackName != 'BoundaryAttack':
+                    if limSup == True:
+                        limInf = True
+                        ind = 2
+                    epsilon += aux[ind]
+                else: #es HopSkipJump
+                    if limInf == True:
+                        limSup = True
+                        ind = 2
+                    if epsilon - aux[ind] < 0:
+                        if ind == 0 and epsilon - aux[1] > 0:
+                            ind = 1
+                        else:
+                            ind = 2
+                    epsilon -= aux[ind]
                 if epsilon == eps:
                     break
-        else:
-            x_test_adv = attack.generate(x=img_array_test, x_adv_init=x_test_adv, resume=True)
+        else: #es para valor fijo 'epsilon'
+            x_test_adv = attack.generate(x=img_array_test)
             isValidAdversarial, predictionID = isAnAdversarialExample(originalImage, x_test_adv[0], classifier)
-
-            if isValidAdversarial:
-                x_adv = copy.deepcopy(x_test_adv[0])
+            x_adv = copy.deepcopy(x_test_adv[0])
+            pred_ID = copy.deepcopy(predictionID)
             break
 
-            epsilon += aux[2]'''
-
-
-    adv_imagen = createAdvImagenFromOriginal(originalImage, x_adv, attackName, epsilon, predictionID)
+    adv_imagen = createAdvImagenFromOriginal(originalImage, x_adv, attackName, epsilon, pred_ID)
     return adv_imagen
 
 def saveVariable(datos, filename):
@@ -370,7 +387,11 @@ def getAttackMethod(name, classifier, epsilon):
     elif name == 'CarliniLInfMethod': # este
         return CarliniLInfMethod(classifier=classifier, confidence=epsilon, learning_rate=0.2, max_iter=10, batch_size=4)
     elif name == 'HopSkipJump':
-        return HopSkipJump(classifier=classifier, targeted=False, max_iter=100, max_eval=200, batch_size=4)#norm="inf"
+        return HopSkipJump(classifier=classifier, targeted=False, max_iter=epsilon, max_eval=100, batch_size=4)#norm="inf" hay que cambiar max_iter y max_eval
+    elif name == 'ZooAttack':
+        return ZooAttack(classifier=classifier)
+    elif name == 'BoundaryAttack':
+        return BoundaryAttack(estimator=classifier, targeted=False, max_iter=epsilon, batch_size=4)
     elif name == 'Wasserstein':
         return Wasserstein(estimator=classifier, eps=epsilon, max_iter=5, batch_size=4)
 

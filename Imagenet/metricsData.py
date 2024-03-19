@@ -12,9 +12,11 @@ class MetricsData:
         self.DistanciaCentroideMax = []
         self.CentroideMin = []
         self.DistanciaCentroideMin = []
-        self.DifMedias = []
         self.NormaMascara = []
         self.NormaImagen = []
+        self.DifMedias = []
+        self.DifNormaMascara = []
+        self.DifNormaImagen = []
         self.MSE = []
         self.PSNR = []
         self.SSIM = []
@@ -29,9 +31,11 @@ class MetricsData:
         self.DistanciaCentroideMax.append(metricsValue[10])
         self.CentroideMin.append(metricsValue[11])
         self.DistanciaCentroideMin.append(metricsValue[12])
-        self.DifMedias.append(metricsValue[13])
-        self.NormaMascara.append(metricsValue[14])
-        self.NormaImagen.append(metricsValue[15])
-        self.MSE.append(metricsValue[16])
-        self.PSNR.append(metricsValue[17])
-        self.SSIM.append(metricsValue[18])
+        self.NormaMascara.append(metricsValue[13])
+        self.NormaImagen.append(metricsValue[14])
+        self.DifMedias.append(metricsValue[15])
+        self.DifNormaMascara.append(metricsValue[16])
+        self.DifNormaImagen.append(metricsValue[17])
+        self.MSE.append(metricsValue[18])
+        self.PSNR.append(metricsValue[19])
+        self.SSIM.append(metricsValue[20])

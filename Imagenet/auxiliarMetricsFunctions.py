@@ -60,13 +60,17 @@ def meanFreqPerBin(bins, array):
     freq_array = []
     inf = 0
     for i in range(0, bins):
-        if interval*(i+1) != 255:
-            sup = np.where(sorted_list >interval*(i+1))[0][0]
+        if sorted_list.mean() != 0:
+            if interval*(i+1) != 255:
+                sup = np.where(sorted_list >interval*(i+1))[0][0]
+            else:
+                sup = len(sorted_list)-1
+            mean_array.append(sorted_list[inf:sup].mean())
+            freq_array.append(len(sorted_list[inf:sup]))
+            inf = sup+1
         else:
-            sup = len(sorted_list)-1
-        mean_array.append(sorted_list[inf:sup].mean())
-        freq_array.append(len(sorted_list[inf:sup]))
-        inf = sup+1
+            mean_array.append(0)
+            freq_array.append(0)
     return mean_array, freq_array
 
 def meanFreqTotalImgPerBin(freq_heatmap):
