@@ -8,11 +8,17 @@ from scipy.stats import ttest_ind, pearsonr, wilcoxon
 
 def initializeData2Csv(list_data):
     data2csv = [["%s" % (list_data[0].networkModelName),"Original - Adv. Natural"]]
-    for atck in range(0, len(list_data)-2) :
+    for atck in range(2, len(list_data)) :
         data2csv.append(["%s" % (list_data[0].networkModelName),
-                         "Original - Adv. %s" % (list_data[atck+2].imageType)])
+                         "Original - Adv. %s" % (list_data[atck].imageType)])
         data2csv.append(["%s" % (list_data[0].networkModelName),
-                         "Adv. Natural - Adv. %s" % (list_data[atck+2].imageType)])
+                         "Adv. Natural - Adv. %s" % (list_data[atck].imageType)])
+    for atck in range(2, len(list_data)):
+        for index in range(atck+1, len(list_data)):
+            data2csv.append(["%s" % (list_data[0].networkModelName),
+                             "Adv. %s - Adv. %s" % (list_data[atck].imageType, list_data[index].imageType)])
+
+
     return data2csv
 
 def obtainListFromObjectMetricsData(metricsData, original = False):
@@ -21,8 +27,6 @@ def obtainListFromObjectMetricsData(metricsData, original = False):
     resultList.append(metricsData.Mediana)
     resultList.append(metricsData.VarianzaPixeles)
     resultList.append(metricsData.DesviacionTipicaPixeles)
-    resultList.append(metricsData.NormaMascara)
-    resultList.append(metricsData.NormaImagen)
     if original:
         for i in range(0,8):
             resultList.append("-")
@@ -30,8 +34,8 @@ def obtainListFromObjectMetricsData(metricsData, original = False):
         resultList.append(metricsData.DistanciaCentroideMax)
         resultList.append(metricsData.DistanciaCentroideMin)
         resultList.append(metricsData.DifMedias)
-        resultList.append(metricsData.DifNormaMascara)
-        resultList.append(metricsData.DifNormaImagen)
+        resultList.append(metricsData.NormaMascara)
+        resultList.append(metricsData.NormaImagen)
         resultList.append(metricsData.MSE)
         resultList.append(metricsData.PSNR)
         resultList.append(metricsData.SSIM)
@@ -52,13 +56,11 @@ header = ["-1", "-2", "Media de la intensidad de los pixeles", "-3",
           "Mediana de la intensidad de los pixeles", "-4",
           "Varianza de la intensidad de los pixeles", "-5",
           "Desviación típica de la intensidad de los pixeles", "-6",
-          "Norma Máscara", "6-",
-          "Norma Imagen", "7-",
           "Distancia al centroide máximo del heatmap", "-7",
           "Distancia al centroide mínimo del heatmap", "-8",
           "Diferencia entre las medias de la intensidad de pixel con respecto a la original", "-9",
-          "Diferencia entre la norma de la máscara con respecto a la original", "1-",
-          "Diferencia entre la norma de la imagen con respecto a la original", "2-",
+          "Norma de la diferencia entre la máscara con respecto a la original", "1-",
+          "Norma de la diferencia entre la imagen adversaria con respecto a la original", "2-",
           "MSE", "3-",
           "PSNR", "4-",
           "SSIM", "5-"]
@@ -119,7 +121,7 @@ for network in range (0, len(list_files_names)):
             if org[metrics][0] != "-": #original - adv art
                 if test == "Wilcoxon" :
                     org_adv = wilcoxon(org[metrics], atcks[atck][metrics], method='approx')
-                    data2csv[2 * atck + 1] += [round(org_adv.statistic, 5), round(org_adv.pvalue, 5)]
+                    data2csv[2*atck+1] += [round(org_adv.statistic, 5), round(org_adv.pvalue, 5)]
                 else:#t test
                     org_adv = ttest_ind(org[metrics], atcks[atck][metrics], equal_var=False)
                     data2csv[2*atck+1] += [round(org_adv.statistic, 5), round(org_adv.pvalue, 5)]
@@ -131,7 +133,16 @@ for network in range (0, len(list_files_names)):
                 data2csv[2*atck+2] += [round(nat_adv.statistic, 5), round(nat_adv.pvalue, 5)]
             else:#t test
                 nat_adv = ttest_ind(nat[metrics], atcks[atck][metrics], equal_var=False)
-                data2csv[2 * atck + 2] += [round(nat_adv.statistic, 5), round(nat_adv.pvalue, 5)]
+                data2csv[2*atck+2] += [round(nat_adv.statistic, 5), round(nat_adv.pvalue, 5)]
+        atck_comparision_index = 2*num_atcks
+        for atck in range(0, num_atcks):
+            for index in range(atck+1, num_atcks):
+                if test == "Wilcoxon" :
+                    adv_adv = wilcoxon(atcks[atck][metrics], atcks[index][metrics], method='approx')
+                    data2csv[atck_comparision_index+atck+index] += [round(adv_adv.statistic, 5), round(adv_adv.pvalue, 5)]
+                else :  # t test
+                    adv_adv = ttest_ind(atcks[atck][metrics], atcks[index][metrics], equal_var=False)
+                    data2csv[atck_comparision_index+atck+index] += [round(adv_adv.statistic, 5), round(adv_adv.pvalue, 5)]
 
     for i in range(0,len(data2csv)):
         aux.addRowToCsvFile(DATA_ID + "%s-statistic_metrics.csv" % (test), header, data2csv[i])
@@ -140,3 +151,4 @@ for network in range (0, len(list_files_names)):
 
     #si no es significativa en muchos casos a lo mejor esa metrica no nos vale para distinguir entre art y natural
 print("se ejecutó %s test" % (test) )
+'''            '''

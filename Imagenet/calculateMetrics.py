@@ -29,8 +29,8 @@ execute_BoxPlot = False
 if calculate_metrics == True:
     metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Predicción", "Media", "Media normalizada", "Mediana",
                    "Varianza", "Desviación Típica", "Centroide Máximo", "Distancia centroides máximos",
-                   "Centroide Mínimo", "Distancia centroides mínimos", "Norma Mascara", "Norma Imagen", "Dif de medias",
-                   "Diferencia Norma Mascara", "Diferencia Norma Imagen", "MSE", "PSNR", "SSIM"]
+                   "Centroide Mínimo", "Distancia centroides mínimos", "Dif de medias", "Diferencia Norma Mascara",
+                   "Diferencia Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
 
 bins = 24
@@ -70,14 +70,12 @@ for num in range(0, NUM_IMG):
         metricsValue.append(round(gray_heatmap.var(), 2)) #"Varianza"
         metricsValue.append(round(gray_heatmap.std(), 2)) #"Desviación Típica"
         mf.writeCentroidsInCSV(metricsValue, gray_heatmap, 215, heatmap_ref) #"Centroide Maximo","Distancia centroides maximos","Centroide Minimo","Distancia centroides minimos"
-        metricsValue.append(round(np.linalg.norm(gray_heatmap), 2))  # "Norma Mascara"
-        metricsValue.append(round(np.linalg.norm(sorted_data[num].data), 2))  # "Norma Imagen"
 
         if metricsValue[1] != "Original": #Si no es la imagen original
             # La norma es la distancia euclidea
             metricsValue.append(abs(round(gray_heatmap.mean()-heatmap_ref.mean(), 2))) #"Dif de medias"
-            metricsValue.append(round(np.linalg.norm(gray_heatmap) - np.linalg.norm(heatmap_ref), 2)) # Diferencia "Norma Mascara"
-            metricsValue.append(round(np.linalg.norm(sorted_data[num].data) - np.linalg.norm(closer_orig_img.data), 2)) # Diferencia "Norma Imagen"
+            metricsValue.append(round(np.linalg.norm(gray_heatmap - heatmap_ref), 2)) #"Norma Mascara"
+            metricsValue.append(round(np.linalg.norm(sorted_data[num].data - closer_orig_img.data), 2)) #"Norma Imagen"
             metricsValue.append(round(mean_squared_error(gray_heatmap, heatmap_ref), 2)) #Mean Squared Error (MSE)
             metricsValue.append(round(cv2.PSNR(gray_heatmap, heatmap_ref), 2)) #Peak Signal-to-Noise Ratio (PSNR)
             metricsValue.append(round(ssim(gray_heatmap, heatmap_ref, data_range=255, channel_axis=-1), 2))#SSIM. The higher the value, the more "similar" the two images are.
