@@ -1,3 +1,15 @@
+"""
+Title: Grad-CAM class activation visualization
+Author: [fchollet](https://twitter.com/fchollet)
+Date created: 2020/04/26
+Last modified: 2021/03/07
+Description: How to obtain a class activation heatmap for an image classification model.
+Accelerator: GPU
+https://keras.io/examples/vision/grad_cam/
+"""
+"""
+Adaptado para el trabajo final de grado de Nerea Leon (Nerea.Leon@alu.uclm.es)
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -8,7 +20,7 @@ from tensorflow import keras
 from IPython.display import Image, display
 import matplotlib.cm as cm
 import cv2
-#https://keras.io/examples/vision/grad_cam/
+
 def get_img_array_path(img_path, size):
     # `img` is a PIL image of size 299x299
     img = cv2.imread(img_path) #BGR

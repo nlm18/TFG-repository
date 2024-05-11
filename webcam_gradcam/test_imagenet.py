@@ -13,9 +13,9 @@ import cv2
 import errno
 import gradCamInterface
 
-NETWORK_NAME = "InceptionV3"#"xception"
-OBJECT = "waterBottle_InceptionV3_5000name"
-realID='n04557648'
+NETWORK_NAME = "xception"#"xception"
+OBJECT = "mouse_%s_5000" % (NETWORK_NAME)
+realID='n03793489'
 
 import os
 import keras
@@ -142,7 +142,7 @@ def webcamShow():
     cv2.namedWindow("webcam")
     vc = cv2.VideoCapture(0)
 
-    N_FRAMES = 5000
+    N_FRAMES = 5
 
     while True:
         # Capture the frame
@@ -150,7 +150,7 @@ def webcamShow():
         #cv2.imshow("webcam", frame)
         # Classify and show the image
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frameDetection,x=classifyImage(frame_rgb,model,NETWORK_NAME)
+        frameDetection,x = classifyImage(frame_rgb,model,NETWORK_NAME)
         frame_bgr = cv2.cvtColor(frameDetection, cv2.COLOR_RGB2BGR)
         cv2.imshow("webcam", frame_bgr)
         # When a key is pressed, start recording

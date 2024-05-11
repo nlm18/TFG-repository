@@ -46,7 +46,7 @@ def obtainListFromObjectMetricsData(metricsData, original = False):
 #https://docs.scipy.org/doc/scipy/reference/stats.html
 # ------------------------ Constantes ---------------------------------------
 DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/case2/variables/"
-DATA_ID = "case2_test_"
+DATA_ID = "case2_full_test_"
 list_files_names = os.listdir(DATA_PATH)
 list_data = []
 var = []
@@ -100,7 +100,7 @@ for network in range (0, len(list_files_names)):
         EfficientNetB0 | Original - Adv Art2     | t1       | p1       | ...
         EfficientNetB0 | Adv. Natural - Adv Art2 | t1       | p1       | ...
         ... '''
-    org = obtainListFromObjectMetricsData(list_data[network][0])
+    org = obtainListFromObjectMetricsData(list_data[network][0], original=True)
     nat = obtainListFromObjectMetricsData(list_data[network][1])
     atcks = []
     for atck in range(0, num_atcks):#1 2,  3  4 +1 y +2 ej 2*0+1  2*0+2  2*1+1 2*1+2 2*2+1 2*2+2
