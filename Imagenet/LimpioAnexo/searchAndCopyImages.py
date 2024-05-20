@@ -14,9 +14,11 @@ def obtainNames(csvFile):
 
 
 # -------------------------------------------------------------------------------
-#Este script pretende guardar las imagenes que se recogen en un archivo csv en una carpeta a parte para volver a
-#ejecutar el codigo principal solo en las imágenes que no obtuvieron los resultados esperados, es decir, no
-#consiguieron confundir a la red neuronal
+''' 
+Este script pretende guardar las imagenes que se recogen en un archivo csv en una carpeta a parte para volver a
+ejecutar el codigo principal solo en las imágenes que no obtuvieron los resultados esperados, es decir, no
+consiguieron confundir a la red neuronal
+'''
 NetworkModelName = 'VGG16'
 DATA_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/waterBottle_%s/selectedOrigImages/" % (NetworkModelName)
 csvFile = "images_to_recalculate_%s.csv" % (NetworkModelName)

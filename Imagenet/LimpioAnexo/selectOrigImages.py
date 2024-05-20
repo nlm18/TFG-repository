@@ -49,9 +49,11 @@ def sortImgList(files_orig_names, files_advNatural_names='', isPkl=False):
     return sorted(orig), sorted(nat)
 
 # -------------------------------------------------------------------------------
-#Este script pretende sacar las imagenes originales mas cercanas a las imagenes adversarias naturales, no se filtra la
-#cantidad de imagenes adversarias naturales se cogen, si se quiere hacer puede generarse un vector aleatorio con usando
-#generateRandomVector de auxiliarFunction.py
+'''
+Este script pretende sacar las imagenes originales mas cercanas a las imagenes adversarias naturales, no se filtra la
+cantidad de imagenes adversarias naturales se cogen, si se quiere hacer puede generarse un vector aleatorio con usando
+generateRandomVector de auxiliarFunction.py
+'''
 def selectImages():
     DATA_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/FountainPen_Xception_5000name/"
     files_advNatural_names = os.listdir(DATA_PATH+"frames_naturalAdv")
@@ -78,8 +80,10 @@ def selectImages():
     for i in range(0, len(selected_orig_names)):
         shutil.copy( DATA_PATH + 'frames_raw/' + selected_orig_names[i], DATA_PATH + "selectedOrigImages/" + selected_orig_names[i])
 
-#Si se quiere encontrar de una imagen en especifico se necesita el nombre y la ruta de la carpeta de imagenes legitimas
-#donde buscar
+'''
+Si se quiere encontrar de una imagen en especifico se necesita el nombre y la ruta de la carpeta de imagenes legitimas
+donde buscar
+'''
 def searchCloserImageByID(imageName, DATA_PATH_ORIG):
     files_orig_names = os.listdir(DATA_PATH_ORIG)
     original_sorted_list, x = sortImgList(files_orig_names)
