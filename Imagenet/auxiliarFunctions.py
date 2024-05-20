@@ -75,7 +75,8 @@ def loadImage(path, index_img, size=(224,224), createImages=True, unclassified_i
         imagen = Imagen(file_name, X_test[0], size, ID, networkName)
         img_test.append(imagen)
     else :
-        img_test = loadVariable(path+"imageFrame_%s_testImage.pkl" % (index_img))
+        index_img = index_img.replace('.png', '')
+        img_test.append(loadVariable(path+"%s_testImage.pkl" % (index_img)))
     return X_test, img_test
 
 def loadImages(path, index_vector, size=(224,224), createImages=True, unclassified_images=False, realID ='', networkName = 'EfficientNet0'):
@@ -100,8 +101,6 @@ def loadImages(path, index_vector, size=(224,224), createImages=True, unclassifi
             X_test[index] = gradCamInterface.get_img_array_path(img_path, size)
             imagen = Imagen(file_name, X_test[index], size, ID, networkName)
             img_test.append(imagen)
-    else :
-        img_test = loadVariable(path+"testImages_efficientnetB0_random%simages.pkl" % (len(index_vector)))
     return X_test, img_test
 
 def loadImagesByID(data_path, data_ID):
@@ -195,8 +194,22 @@ def isAnAdversarialExample(originalImage, adv_img, classifier):
     if p[0][0][0] != originalImage.id:
         isValid = True
     return isValid, p[0][0][0]
-
-def generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False, isImagenet=True):
+def generateAllAdversarialImagesAtOnce(originalImages, x_test, attackName, epsilon, classifier, path, isImagenet=True):
+    # Generate adversarial test examples
+    attack = getAttackMethod(attackName, classifier, epsilon)
+    x_test_adv = attack.generate(x=x_test)
+    adv_imagen = []
+    for img in range(0, len(originalImages)) :
+        isValidAdversarial, predictionID = isAnAdversarialExample(originalImages[img], x_test_adv[img], classifier)
+        x_test = copy.deepcopy(x_test_adv[img])
+        adv_imagen.append(createAdvImagenFromOriginal(originalImages[img], x_test, attackName,
+                                             epsilon, predictionID))
+        img_id = adv_imagen[img].name
+        img_id = img_id.replace('.png', '')
+        filepath = path+"%s_adversarialImage_atck_%s" % (img_id,attackName) + ".pkl"
+        saveVariable(adv_imagen[img], filepath)
+        printResultsPerImage(originalImages[img], adv_imagen[img])
+def deprecated_generateAdversarialImages(originalImages, x_test, attackName, epsilon, classifier, createImages=True, saveIndividualAttack=False, isImagenet=True):
     # Para distintos valores de epsilon
     arrayShape = (len(x_test), originalImages[0].size[0], originalImages[0].size[1], 3)
     img_array_test = np.ndarray(shape=arrayShape, dtype='float32')
@@ -248,7 +261,7 @@ def generateAnAdversarialImage(originalImage, x_test, attackName, classifier, is
     if isValidToCreateAdversarialExample(originalImage, classifier, isImagenet) == False:
         img_array_test[0] = x_test*0
     else:
-        img_array_test[0] = originalImage.data
+        img_array_test[0] = copy.deepcopy(originalImage.data)
     limSup = False
     limInf = False
     eps = 0
@@ -349,7 +362,7 @@ def preprocess_input(NetworkModelName, img_array):
         return preprocess_mobileNet(img_array)
 
 def decode_predictions(NetworkModelName, preds):
-    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0':
+    if NetworkModelName == 'EfficientNetB0' or NetworkModelName == 'efficientNetB0' or NetworkModelName == 'efficientnetb0':
         return decode_efficientnet0(preds, top=1)
     elif NetworkModelName == 'Xception' or NetworkModelName == 'xception':
         return decode_xception(preds, top=1)

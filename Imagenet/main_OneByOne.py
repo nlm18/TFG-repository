@@ -57,9 +57,9 @@ IMG_SHAPE = (299, 299, 3)
 LR = 0.01 #Learning Rate usado en el optimizador
 NUM_IMG = 500 #Cantidad de imagenes de test
 TOTAL_IMG = 500 #Cantidad de imagenes de las que se disponen, imagenet=50000
-ATTACK_NAME = 'HopSkipJump'#ProjectedGradientDescent FastGradientMethod BasicIterativeMethod HopSkipJump CarliniLInfMethod
+ATTACK_NAME = 'ProjectedGradientDescent'#ProjectedGradientDescent FastGradientMethod BasicIterativeMethod HopSkipJump CarliniLInfMethod BoundaryAttack
 #comprobar epsilon en el adv
-NetworkModelName = 'Xception'
+NetworkModelName = 'VGG16'
 #cambiar parametros de entrada de loadImages segun si son de imagenet o no
 IMG_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/luz_validos/waterBottle_%s_5000luz/" % (NetworkModelName) #/luz_validos/waterBottle_%s_5000luz/ /FountainPen_%s_5000name/
 folder = 'selectedOrigImages/'#'frames_naturalAdv/' 'selectedOrigImages/'
@@ -80,6 +80,7 @@ classifier = TensorFlowV2Classifier(model=model, clip_values=(0, 255), nb_classe
 aux.createDirs(EXECUTION_ID, onebyone=True)
 num_AdvNaturales = 0
 startIndex = 0
+createAdvImages=False
 #Load Images
 for num_img in range(startIndex, NUM_IMG) :
     #Si falla al cargar la imagen comprueba que hay num_img suficientes en la carpeta
@@ -87,12 +88,21 @@ for num_img in range(startIndex, NUM_IMG) :
 #Si createImages = True: cargará las imagenes originales desde la carpeta y generará las adversarias de cero
 #Si unclassified_images = True: cargará las imagenes que no son de imagenet y por tanto no estan dentro de una carpeta con el valor de su ID
     print("Image name: %s" %(img_test[0].name))
-    if folder == 'frames_naturalAdv/':
-        closerImageName = searchCloserImageByID(img_test[0].name, IMG_PATH+'selectedOrigImages/')
-        img_test[0].addCloserOriginalImageName(closerImageName)
-    #Generate Adversarial
-    img_adv=[]
-    img_adv.append(aux.generateAnAdversarialImage(img_test[0], x_test[0], ATTACK_NAME, classifier, isImagenet=False))
+    img_adv = []
+    if createAdvImages:
+        if folder == 'frames_naturalAdv/':
+            closerImageName = searchCloserImageByID(img_test[0].name, IMG_PATH+'selectedOrigImages/')
+            img_test[0].addCloserOriginalImageName(closerImageName)
+        #Generate Adversarial
+        img_adv.append(aux.generateAnAdversarialImage(img_test[0], x_test[0], ATTACK_NAME, classifier, isImagenet=False))
+    else:
+        variablePath = "C:/Users/User/TFG-repository/Imagenet/recalculateVariables_%s/" % (NetworkModelName)
+        orig_img_name = copy.deepcopy(img_test[0].name)
+        orig_img_name = orig_img_name.replace('.png','')
+        file_name = "%s_adversarialImage_atck_%s.pkl" % (orig_img_name, ATTACK_NAME)
+        img_adv.append(aux.loadVariable(variablePath+file_name))
+
+
 #Hasta aqui tenemos un objeto imagen para la original y otro para la adversaria, en ambas se ha predicho ya la clase
 
 #GRAD CAM
