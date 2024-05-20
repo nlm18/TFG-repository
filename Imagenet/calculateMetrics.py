@@ -14,15 +14,15 @@ import auxiliarMetricsFunctions as mf
 #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html
 #https://www.jmp.com/es_es/statistics-knowledge-portal/t-test/two-sample-t-test.html
 # ------------------------ Constantes ---------------------------------------
-DATA_ID = "InceptionResNetV2" #EfficientNetB0
-DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/case1/variablesIndividuales_Test_%s/" % (DATA_ID) #"D:/TFG_VISILAB_FOTOS/case01_waterBottle/results_%s/variablesIndividuales_Test_%s/" % (DATA_ID, DATA_ID)
-ATCK_NAME = ["FastGradientMethod", "ProjectedGradientDescent"]#"BoundaryAttack" ["BoundaryAttack", "FastGradientMethod", "ProjectedGradientDescent"]HopSkipJump
+DATA_ID = "Xception" #EfficientNetB0
+DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/case1/ArtificialAdversarial-BoundaryAttack_%s/" % (DATA_ID)#"D:/TFG_VISILAB_FOTOS/case01_waterBottle/results_%s/variablesIndividuales_Test_%s/" % (DATA_ID, DATA_ID)
+ATCK_NAME = ["BoundaryAttack"]#"BoundaryAttack" ["BoundaryAttack", "FastGradientMethod", "ProjectedGradientDescent"]HopSkipJump
 NUM_ATCKS = len(ATCK_NAME) #Numero de ataques distintos que se usaron cuando se guardaron las imagenes
 sorted_data, name_list = aux.loadImagesSorted(DATA_PATH, NUM_ATCKS)
 NUM_IMG = len(sorted_data)
 
 # ------------------------ Operaciones --------------------------------------
-calculate_metrics = True #tarda 'poco'
+calculate_metrics = False #tarda 'poco'
 execute_Histogram = False #tarda mucho
 execute_BoxPlot = False
 
@@ -40,7 +40,7 @@ mean_heatmap_array_original = []
 freq_heatmap_array_advNatural = []
 freq_heatmap_array_advArtificial = []
 freq_heatmap_array_original = []
-if len(ATCK_NAME[0]) != 1 :
+if len(ATCK_NAME) != 1 :
     valoresMetricas = mf.initializeVariablesToSave(ATCK_NAME, sorted_data[0]) #Dentro del vector ira Orig - AdvNatural - Adv1 - Adv2...
 
 for num in range(0, NUM_IMG):
@@ -92,7 +92,7 @@ for num in range(0, NUM_IMG):
 
 
         aux.addRowToCsvFile(DATA_ID+"_metrics.csv", metricsName, metricsValue)
-        if len(ATCK_NAME[0]) != 1 :
+        if len(ATCK_NAME) != 1 :
             mf.saveMetricsInVariable(ATCK_NAME, metricsValue, valoresMetricas)
 
     #heatmap_array_sinMenorQue25 = [x for x in heatmap_array if x > 25]
@@ -103,7 +103,7 @@ for num in range(0, NUM_IMG):
     if execute_BoxPlot == True:
         aux.saveBoxPlot(heatmap_array, sorted_data[num], DATA_ID)
 
-    if len(ATCK_NAME[0]) == 1 :  # No es un vector por lo que puedo generar las graficas del ataque correspondiente
+    if len(ATCK_NAME) == 1 :  # No es un vector por lo que puedo generar las graficas del ataque correspondiente
         meanPerBin, freqPerBin = mf.meanFreqPerBin(bins, heatmap_array)
         if metricsValue[1] != "Original":
             if metricsValue[1] == "Adv. Natural":
@@ -116,7 +116,7 @@ for num in range(0, NUM_IMG):
         else:
             mean_heatmap_array_original += meanPerBin
             freq_heatmap_array_original.append(freqPerBin)
-if len(ATCK_NAME[0]) == 1 :  # No es un vector por lo que puedo generar las graficas del ataque correspondiente
+if len(ATCK_NAME) == 1 :  # No es un vector por lo que puedo generar las graficas del ataque correspondiente
     freq500_Orig, std_orig = mf.meanFreqTotalImgPerBin(freq_heatmap_array_original)
     freq500_AdvNat, std_nat = mf.meanFreqTotalImgPerBin(freq_heatmap_array_advNatural)
     freq500_AdvArt, std_art = mf.meanFreqTotalImgPerBin(freq_heatmap_array_advArtificial)
@@ -126,12 +126,12 @@ if len(ATCK_NAME[0]) == 1 :  # No es un vector por lo que puedo generar las graf
     aux.saveBarWithError(mean500_Orig, freq500_Orig, std_orig, "originales", DATA_ID)
     aux.saveBarWithError(mean500_AdvNat, freq500_AdvNat, std_nat, "adv. naturales", DATA_ID)
     aux.saveBarWithError(mean500_AdvArt, freq500_AdvArt, std_art, "adv. artificiales,", DATA_ID,
-                         ATCK_NAME)
+                         ATCK_NAME[0])
     mf.createDataFrameToPlot(freq500_Orig, freq500_AdvNat, freq500_AdvArt,
-                          std_orig, std_nat, std_art, DATA_ID, atck=ATCK_NAME)
+                          std_orig, std_nat, std_art, DATA_ID, atck=ATCK_NAME[0])
     aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq500_Orig,
                           freq500_AdvNat, freq500_AdvArt, std_orig, std_nat, std_art,
-                          DATA_ID, ATCK_NAME)
+                          DATA_ID, ATCK_NAME[0])
 
     mean_freq_Orig = mf.combineMeanValueWithFreq(mean500_Orig, freq500_Orig)
     mean_freq_AdvNat = mf.combineMeanValueWithFreq(mean500_AdvNat, freq500_AdvNat)
@@ -140,7 +140,7 @@ if len(ATCK_NAME[0]) == 1 :  # No es un vector por lo que puedo generar las graf
     summary_boxplot.append(mean_freq_Orig)
     summary_boxplot.append(mean_freq_AdvNat)
     summary_boxplot.append(mean_freq_AdvArt)
-    aux.saveBoxPlot(summary_boxplot, "", DATA_ID, atck=ATCK_NAME)
-    aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True, atck=ATCK_NAME)
+    aux.saveBoxPlot(summary_boxplot, "", DATA_ID, atck=ATCK_NAME[0])
+    aux.saveBoxPlot(summary_boxplot, "", DATA_ID, violin=True, atck=ATCK_NAME[0])
 else:
     aux.saveVariable(valoresMetricas, "vectoresMetricas_%s.pkl" % (DATA_ID))
