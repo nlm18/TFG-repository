@@ -7,7 +7,7 @@ import gradCamInterface
 import auxiliarFunctions as aux
 import auxiliarMetricsFunctions as mf
 
-# ------------------------ Constantes ---------------------------------------
+# --------------------- Constantes ------------------------------
 DATA_ID = "Xception"
 DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/case1/variablesIndividuales_%s/" % (DATA_ID)
 ATCK_NAME = ["BoundaryAttack", "FastGradientMethod", "ProjectedGradientDescent"]
@@ -15,7 +15,7 @@ NUM_ATCKS = len(ATCK_NAME) #Numero de ataques distintos que se usaron cuando se 
 sorted_data, name_list = aux.loadImagesSorted(DATA_PATH, NUM_ATCKS)
 NUM_IMG = len(sorted_data)
 
-# ------------------------ Operaciones --------------------------------------
+# --------------------- Operaciones ----------------------------
 calculate_metrics = True
 execute_Histogram = False
 execute_BoxPlot = False

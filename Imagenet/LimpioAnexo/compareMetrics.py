@@ -4,7 +4,7 @@ import gc
 import auxiliarFunctions as aux
 from scipy.stats import ttest_ind, wilcoxon
 
-# ------------------------ Funciones auxiliares ---------------------------------
+# -------------------- Funciones auxiliares --------------------
 def initializeData2Csv(list_data):
     data2csv = [["%s" % (list_data[0].networkModelName),"Original - Adv. Natural"]]
     for atck in range(2, len(list_data)) :
@@ -40,7 +40,7 @@ def obtainListFromObjectMetricsData(metricsData, original = False):
         resultList.append(metricsData.SSIM)
     return resultList
 
-# ------------------------ Constantes ---------------------------------------
+# --------------------- Constantes ------------------------------
 DATA_PATH = "C:/Users/User/TFG-repository/Imagenet/case1/variables/"
 DATA_ID = "case1_test_"
 list_files_names = os.listdir(DATA_PATH)
@@ -48,7 +48,7 @@ list_data = []
 var = []
 test = 't' #'t' o 'Wilcoxon'
 
-# ------------------------ Operaciones --------------------------------------
+# --------------------- Operaciones ----------------------------
 header = ["-1", "-2", "Media de la intensidad de los pixeles", "-3",
           "Mediana de la intensidad de los pixeles", "-4",
           "Varianza de la intensidad de los pixeles", "-5",
