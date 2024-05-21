@@ -78,11 +78,6 @@ for num in range(0, NUM_IMG):
             mf.saveMetricsInVariable(ATCK_NAME, metricsValue, valoresMetricas)
 
     #se ejecuta por imagen
-    if execute_Histogram == True:
-        aux.saveHistogram(heatmap_array, sorted_data[num], DATA_ID)
-    if execute_BoxPlot == True:
-        aux.saveBoxPlot(heatmap_array, sorted_data[num], DATA_ID)
-
     if len(ATCK_NAME) == 1 :  # No es un vector por lo que puedo generar las graficas del ataque correspondiente
         meanPerBin, freqPerBin = mf.meanFreqPerBin(bins, heatmap_array)
         if metricsValue[1] != "Original":

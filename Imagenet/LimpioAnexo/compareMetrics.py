@@ -146,4 +146,4 @@ for network in range (0, len(list_files_names)):
     del nat_adv, org_nat, org_adv, data2csv
     gc.collect()
 
-print("se ejecutó %s test" % (test))
+print("se ha ejecutado %s test" % (test))
