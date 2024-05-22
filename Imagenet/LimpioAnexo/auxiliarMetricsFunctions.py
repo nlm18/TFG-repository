@@ -91,7 +91,7 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
     df = pd.DataFrame(columns=columns)
     dfe = pd.DataFrame(columns=columns)
 
-    # añadimos filas por su nombre de columna
+    # agregamos filas por su nombre de columna
     df['Original'] = list(freq_orig)
     df['Adv. Natural'] = list(freq_nat)
     df[atck] = list(freq_art)
