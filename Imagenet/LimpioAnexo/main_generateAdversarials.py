@@ -56,7 +56,7 @@ if NetworkModelName == "VGG16" or NetworkModelName == "EfficientNetB0":
     IMG_SIZE = (224, 224)
     IMG_SHAPE = (224, 224, 3)
 
-# -------------------- Código principal -------------------------
+# -------------------- Codigo principal -------------------------
 model = aux.getNetworkModel(NetworkModelName)
 model.trainable = False
 optimizer = tf.keras.optimizers.Adam(learning_rate=LR)

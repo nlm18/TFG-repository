@@ -33,7 +33,7 @@ def saveMetricsInVariable(advVector, metricsData, variable):
     type = metricsData[1]
     if type == "Original":
         variable[0].addMetricsValue(metricsData)
-    elif  type == "Adv. Natural":
+    elif type == "Adv. Natural":
         variable[1].addMetricsValue(metricsData)
     for i in range(0, len(advVector)):
         if type == advVector[i]:
@@ -41,7 +41,7 @@ def saveMetricsInVariable(advVector, metricsData, variable):
 
 def searchCloserOriginalImage(img_test, name_list, num):
 #Se parte de que el objeto imagen tiene un parametro que dice el nombre de su imagen original mas cercana
-#y la lista esta ordenada de la forma image_1_testImage,image_1_adversarial,image_2_testImage
+#y la lista esta ordenada de la forma image_1_testImage, image_1_adversarial, image_2_testImage
     if img_test[num].closerOriginalImageName != '':
         pos = name_list.index(img_test[num].closerOriginalImageName)
         if img_test[pos].name == img_test[num].closerOriginalImageName and img_test[pos].attackName == '':
@@ -91,7 +91,7 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
     df = pd.DataFrame(columns=columns)
     dfe = pd.DataFrame(columns=columns)
 
-    # añadimos filas por su nombre de fila
+    # añadimos filas por su nombre de columna
     df['Original'] = list(freq_orig)
     df['Adv. Natural'] = list(freq_nat)
     df[atck] = list(freq_art)
@@ -101,8 +101,8 @@ def createDataFrameToPlot(freq_orig, freq_nat, freq_art, std_orig, std_nat, std_
 
     df.plot(kind='bar', ecolor="#FF5733", width=0.8)
     plt.legend(["Original", "Adv. Natural", "Adv. Artificial: %s" % (atck)])
-    plt.title('Histograma comparativo del mapa de activación,\nresumen de las 500 imágenes de cada tipo')
-    plt.xlabel('Intervalos de intensidad del mapa de activación')
+    plt.title('Histograma comparativo del mapa de activacion,\nresumen de las 500 imagenes de cada tipo')
+    plt.xlabel('Intervalos de intensidad del mapa de activacion')
     plt.ylabel('Frecuencia')
     plt.xticks([])
     plt.subplots_adjust(bottom=0.1, right=0.97)
@@ -210,12 +210,12 @@ def saveHistogram(metrics_data, DATA_ID, save=True):
     try :
         os.mkdir('graficas-%s' % (DATA_ID))
     except OSError as e :
-        if e.errno != errno.EEXIST :
+        if e.errno != errno.EEXIST:
             raise
 
     plt.hist(x=metrics_data, bins=24, color='#40A2C6', rwidth=0.85)
     plt.title('Histograma del \nimagen %s' % (DATA_ID))
-    plt.xlabel('Intensidad del mapa de activación')
+    plt.xlabel('Intensidad del mapa de activacion')
     plt.ylabel('Frecuencia')
     plt.xticks(rotation=45)
     plt.subplots_adjust(bottom=0.14, right=0.97)

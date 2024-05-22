@@ -21,9 +21,9 @@ execute_Histogram = False
 execute_BoxPlot = False
 
 if calculate_metrics == True:
-    metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Predicción", "Media", "Media normalizada", "Mediana",
-                   "Varianza", "Desviación Típica", "Centroide Máximo", "Distancia centroides máximos",
-                   "Centroide Mínimo", "Distancia centroides mínimos", "Dif de medias", "Diferencia Norma Mascara",
+    metricsName = ["Nombre Imagen", "Ataque", "Epsilon", "Prediccion", "Media", "Media normalizada", "Mediana",
+                   "Varianza", "Desviacion Tipica", "Centroide Maximo", "Distancia centroides maximos",
+                   "Centroide Minimo", "Distancia centroides minimos", "Dif de medias", "Diferencia Norma Mascara",
                    "Diferencia Norma Imagen", "MSE", "PSNR", "SSIM"]
     aux.createCsvFile(DATA_ID+"_metrics.csv", metricsName)
 
@@ -58,7 +58,7 @@ for num in range(0, NUM_IMG):
         metricsValue.append(round(gray_heatmap.mean()/255, 2)) #"Media normalizada"
         metricsValue.append(round(median(heatmap_array), 2)) #"Mediana"
         metricsValue.append(round(gray_heatmap.var(), 2)) #"Varianza"
-        metricsValue.append(round(gray_heatmap.std(), 2)) #"Desviación Típica"
+        metricsValue.append(round(gray_heatmap.std(), 2)) #"Desviacion Tipica"
         mf.writeCentroidsInCSV(metricsValue, gray_heatmap, 215, heatmap_ref) #"Centroide Maximo","Distancia centroides maximos","Centroide Minimo","Distancia centroides minimos"
 
         if metricsValue[1] != "Original": #Si no es la imagen original
@@ -105,7 +105,7 @@ if len(ATCK_NAME) == 1 :  # No es un vector por lo que puedo generar las grafica
     mf.createDataFrameToPlot(freq500_Orig, freq500_AdvNat, freq500_AdvArt,
                           std_orig, std_nat, std_art, DATA_ID, atck=ATCK_NAME[0])
     aux.saveMeanLineWithError(mean500_Orig, mean500_AdvNat, mean500_AdvArt, freq500_Orig,
-                          freq500_AdvNat, freq500_AdvArt, std_orig, std_nat, std_art,
+                          freq500_AdvNat, freq500_AdvArt,
                           DATA_ID, ATCK_NAME[0])
 
     mean_freq_Orig = mf.combineMeanValueWithFreq(mean500_Orig, freq500_Orig)
