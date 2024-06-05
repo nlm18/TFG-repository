@@ -60,7 +60,7 @@ if NetworkModelName == "VGG16" or NetworkModelName == "EfficientNetB0":
     IMG_SIZE = (224, 224)
     IMG_SHAPE = (224, 224, 3)
 
-# ------------------------ Codigo principal ---------------------------------
+# -------------------- Codigo principal ------------------------
 # Load model: CNN
 model = aux.getNetworkModel(NetworkModelName)
 model.trainable = False
