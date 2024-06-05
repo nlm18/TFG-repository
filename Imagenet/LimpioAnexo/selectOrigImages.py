@@ -3,7 +3,7 @@ import errno
 import shutil
 import re
 
-# ------------------------ Funciones auxiliares ---------------------------------
+# -------------------- Funciones auxiliares --------------------
 def obtainImageNumber(imageName, isPkl=False):
     num = imageName.replace('imageFrame_', '')
     if isPkl == True:
@@ -48,14 +48,14 @@ def sortImgList(files_orig_names, files_advNatural_names='', isPkl=False):
         orig.append(obtainImageNumber(files_orig_names[i], isPkl))
     return sorted(orig), sorted(nat)
 
-# -------------------------------------------------------------------------------
+# --------------------------------------------------------------
 '''
 Este script pretende sacar las imagenes originales mas cercanas a las imagenes adversarias naturales, no se filtra la
-cantidad de imagenes adversarias naturales se cogen, si se quiere hacer puede generarse un vector aleatorio con usando
-generateRandomVector de auxiliarFunction.py
+cantidad de imagenes adversarias naturales se cogen todas las de la carpeta, si se quiere hacer puede generarse un 
+vector aleatorio con usando generateRandomVector de auxiliarFunction.py
 '''
 def selectImages():
-    DATA_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/FountainPen_Xception_5000name/"
+    DATA_PATH = "C:/Users/User/TFG-repository/webcam_gradcam/ImageNetWebcam/FountainPen_Xception/"
     files_advNatural_names = os.listdir(DATA_PATH+"frames_naturalAdv")
     files_orig_names = os.listdir(DATA_PATH+"frames_raw")
 
