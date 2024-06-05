@@ -8,6 +8,7 @@ from tensorflow import keras
 from art.estimators.classification import TensorFlowV2Classifier
 
 # -------------------- Funciones auxiliares --------------------
+# --------------- basadas en el ejemplo de Keras ---------------
 def train_step(model, images, labels):
     with tf.GradientTape() as tape:
         predictions = model(images, training=True)
